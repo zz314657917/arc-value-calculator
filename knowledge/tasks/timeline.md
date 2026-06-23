@@ -1,3 +1,13 @@
+## 2026-06-23 15:34 +08:00 - 服务实例拆分与生成规则事务写入
+
+- 当前阶段：`0.2.0` 继续完善，服务端/客户端 fallback 状态隔离与生成规则落盘安全已完成。
+- 本段重点：新增 `ValueServices.server()` / `clientFallback()` 分流；服务端命令、网络和生命周期使用权威实例；客户端 recipe 更新只刷新 fallback 实例；生成规则目录先写临时目录再替换旧目录。
+- 已完成：移除单一静态 `ValueService.get()`；`RuleFileStore` 支持路径注入和临时目录替换；补充生成规则目录替换测试；README 与 architecture/current-task/build 文档已同步。
+- 关键决策：保留 `ArcValueApi` 外部接口不变，内部按当前是否有服务端选择 server 或 client fallback；生成规则写入失败时保留旧目录，不再先删后写。
+- 验证记录：`./gradlew.bat test` 通过；`./gradlew.bat build` 通过；新版 `arcvaluecalc-0.2.0.jar` 已覆盖到 ArcartX 1.20.1 客户端 mods 目录。
+- 遗留问题：仍未实际启动客户端或专服；机器配方 adapter、容器返还物/燃料成本、SCC 增益循环检测仍未实现。
+- 下一步：提交并推送；重启客户端执行 `/arcvalue reload`；多人环境验证服务端权威值、NBT 精确价格和 reload 同步。
+
 ## 2026-06-23 13:25 +08:00 - 0.2.0 follow-up review 修复
 
 - 当前阶段：按 review 继续加固 `0.2.0`，代码、测试、构建和客户端 jar 部署已完成。

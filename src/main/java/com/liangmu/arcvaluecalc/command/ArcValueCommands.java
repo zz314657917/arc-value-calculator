@@ -5,6 +5,7 @@ import com.liangmu.arcvaluecalc.model.ValueKey;
 import com.liangmu.arcvaluecalc.service.PriceParser;
 import com.liangmu.arcvaluecalc.service.ValueFormatter;
 import com.liangmu.arcvaluecalc.service.ValueService;
+import com.liangmu.arcvaluecalc.service.ValueServices;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import java.nio.file.Path;
@@ -63,14 +64,15 @@ public final class ArcValueCommands {
             source.sendFailure(Component.translatable("commands.arcvalue.no_item"));
             return 0;
         }
-        return ValueService.get().getValue(stack).map(value -> {
+        ValueService service = ValueServices.server();
+        return service.getValue(stack).map(value -> {
             source.sendSuccess(() -> Component.translatable(
                     "commands.arcvalue.value",
                     stack.getHoverName(),
                     ValueFormatter.display(value),
                     ArcValueConfig.VALUE_UNIT.get()
             ), false);
-            source.sendSuccess(() -> Component.translatable("commands.arcvalue.source", ValueService.get().getSource(stack).name()), false);
+            source.sendSuccess(() -> Component.translatable("commands.arcvalue.source", service.getSource(stack).name()), false);
             return 1;
         }).orElseGet(() -> {
             source.sendFailure(Component.translatable("commands.arcvalue.no_value"));
@@ -87,7 +89,7 @@ public final class ArcValueCommands {
         try {
             ValueKey key = ValueKey.itemOnly(stack);
             var value = PriceParser.parsePrice(price);
-            ValueService.get().setManualValue(key, value, source.getServer().getRecipeManager());
+            ValueServices.server().setManualValue(key, value, source.getServer().getRecipeManager());
             source.sendSuccess(() -> Component.translatable(
                     "commands.arcvalue.set",
                     key.item().toString(),
@@ -109,7 +111,7 @@ public final class ArcValueCommands {
         }
         try {
             ValueKey key = ValueKey.itemOnly(stack);
-            boolean removed = ValueService.get().removeManualValue(key, source.getServer().getRecipeManager());
+            boolean removed = ValueServices.server().removeManualValue(key, source.getServer().getRecipeManager());
             if (removed) {
                 source.sendSuccess(() -> Component.translatable("commands.arcvalue.remove", key.item().toString()), true);
                 return 1;
@@ -126,7 +128,7 @@ public final class ArcValueCommands {
         try {
             ResourceLocation tag = parseTag(tagText);
             var value = PriceParser.parsePrice(price);
-            ValueService.get().setTagValue(tag, value, source.getServer().getRecipeManager());
+            ValueServices.server().setTagValue(tag, value, source.getServer().getRecipeManager());
             source.sendSuccess(() -> Component.translatable(
                     "commands.arcvalue.settag",
                     tag.toString(),
@@ -143,7 +145,7 @@ public final class ArcValueCommands {
     private static int removeTag(CommandSourceStack source, String tagText) {
         try {
             ResourceLocation tag = parseTag(tagText);
-            boolean removed = ValueService.get().removeTagValue(tag, source.getServer().getRecipeManager());
+            boolean removed = ValueServices.server().removeTagValue(tag, source.getServer().getRecipeManager());
             if (removed) {
                 source.sendSuccess(() -> Component.translatable("commands.arcvalue.removetag", tag.toString()), true);
                 return 1;
@@ -157,8 +159,9 @@ public final class ArcValueCommands {
     }
 
     private static int reload(CommandSourceStack source) {
-        ValueService.get().reload(source.getServer().getRecipeManager(), source.getServer().registryAccess(), true);
-        source.sendSuccess(() -> Component.translatable("commands.arcvalue.reload", ValueService.get().size()), true);
+        ValueService service = ValueServices.server();
+        service.reload(source.getServer().getRecipeManager(), source.getServer().registryAccess(), true);
+        source.sendSuccess(() -> Component.translatable("commands.arcvalue.reload", service.size()), true);
         return 1;
     }
 
@@ -166,9 +169,9 @@ public final class ArcValueCommands {
         try {
             Path path;
             if ("rules".equals(type)) {
-                path = ValueService.get().exportRules();
+                path = ValueServices.server().exportRules();
             } else if ("values".equals(type)) {
-                path = ValueService.get().exportValues();
+                path = ValueServices.server().exportValues();
             } else {
                 source.sendFailure(Component.literal("type must be rules or values"));
                 return 0;

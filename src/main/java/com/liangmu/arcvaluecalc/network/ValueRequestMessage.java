@@ -1,7 +1,7 @@
 package com.liangmu.arcvaluecalc.network;
 
 import com.liangmu.arcvaluecalc.model.ValueKey;
-import com.liangmu.arcvaluecalc.service.ValueService;
+import com.liangmu.arcvaluecalc.service.ValueServices;
 import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
@@ -30,7 +30,7 @@ public final class ValueRequestMessage {
         if (player != null && isAcceptable(message.stack) && ValueRequestLimiter.allow(player)) {
             try {
                 ValueKey requestedKey = ValueKey.exact(message.stack);
-                ArcValueNetwork.sendValue(player, ValueResponseMessage.fromLookup(requestedKey, ValueService.get().lookup(message.stack)));
+                ArcValueNetwork.sendValue(player, ValueResponseMessage.fromLookup(requestedKey, ValueServices.server().lookup(message.stack)));
             } catch (IllegalArgumentException ignored) {
                 // Ignore malformed or unregistered client stacks.
             }

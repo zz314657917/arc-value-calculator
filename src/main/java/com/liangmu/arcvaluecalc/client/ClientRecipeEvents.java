@@ -1,7 +1,7 @@
 package com.liangmu.arcvaluecalc.client;
 
 import com.liangmu.arcvaluecalc.ArcValueCalc;
-import com.liangmu.arcvaluecalc.service.ValueService;
+import com.liangmu.arcvaluecalc.service.ValueServices;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RecipesUpdatedEvent;
@@ -18,7 +18,7 @@ public final class ClientRecipeEvents {
     public static void onRecipesUpdated(RecipesUpdatedEvent event) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level != null) {
-            ValueService.get().reload(event.getRecipeManager(), minecraft.level.registryAccess(), false);
+            ValueServices.clientFallback().reload(event.getRecipeManager(), minecraft.level.registryAccess(), false);
         }
     }
 

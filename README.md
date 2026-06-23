@@ -59,6 +59,8 @@ config/arcvaluecalc/value_rule_generated/
 config/arcvaluecalc/value_rule/
 ```
 
+自动生成目录会先写入同父级临时目录，全部规则写入成功后再替换旧目录；写入失败会保留旧生成目录。
+
 ## 价格优先级
 
 价格来源按下面顺序生效：
@@ -331,4 +333,4 @@ build/libs/arcvaluecalc-0.2.0.jar
 - NBT 定价能力存在于数据结构中，但命令只完整管理物品 ID 固定价和标签价。
 - 专服网络同步需要继续做实际多人环境烟测。
 - 仍未处理容器返还物、燃料成本、加工成本和配方环强连通分量检测。
-- 单机逻辑服务端和客户端 fallback 仍共享同一个静态 `ValueService`，后续需要拆分服务端权威服务与客户端本地 fallback。
+- 服务端权威价格服务和客户端本地 fallback 服务已拆分；专服网络同步仍需要实际多人环境烟测。

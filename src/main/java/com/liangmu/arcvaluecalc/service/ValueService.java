@@ -35,8 +35,7 @@ import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraftforge.server.ServerLifecycleHooks;
 
 public final class ValueService {
-    private static final ValueService INSTANCE = new ValueService();
-
+    private final boolean writeGeneratedRuleFiles;
     private final ValueFileStore valueFileStore = new ValueFileStore();
     private final RuleFileStore ruleFileStore = new RuleFileStore();
     private final RecipeRuleGenerator recipeRuleGenerator = new RecipeRuleGenerator();
@@ -47,11 +46,8 @@ public final class ValueService {
     private List<ConfigDiagnostic> configDiagnostics = List.of();
     private long generation;
 
-    private ValueService() {
-    }
-
-    public static ValueService get() {
-        return INSTANCE;
+    ValueService(boolean writeGeneratedRuleFiles) {
+        this.writeGeneratedRuleFiles = writeGeneratedRuleFiles;
     }
 
     public synchronized void reload(RecipeManager recipeManager, RegistryAccess registryAccess, boolean notifyClients) {
@@ -66,7 +62,7 @@ public final class ValueService {
         expandTagValues(manualValues, tagResult.values(), tagIndex);
         List<ValueRule> manualRules = ruleFileStore.loadManualRules();
         List<ValueRule> generatedRules = recipeManager == null ? ruleFileStore.loadGeneratedRules() : recipeRuleGenerator.generate(recipeManager, registryAccess);
-        if (recipeManager != null && ArcValueConfig.GENERATE_RULE_FILES.get()) {
+        if (writeGeneratedRuleFiles && recipeManager != null && ArcValueConfig.GENERATE_RULE_FILES.get()) {
             try {
                 ruleFileStore.writeGeneratedRules(generatedRules);
             } catch (IOException e) {

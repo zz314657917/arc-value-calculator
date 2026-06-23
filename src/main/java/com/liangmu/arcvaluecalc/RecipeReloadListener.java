@@ -1,6 +1,6 @@
 package com.liangmu.arcvaluecalc;
 
-import com.liangmu.arcvaluecalc.service.ValueService;
+import com.liangmu.arcvaluecalc.service.ValueServices;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
@@ -25,7 +25,7 @@ public final class RecipeReloadListener implements PreparableReloadListener {
                 .thenRunAsync(() -> {
                     if (ServerLifecycleHooks.getCurrentServer() != null) {
                         RecipeManager recipeManager = ServerLifecycleHooks.getCurrentServer().getRecipeManager();
-                        ValueService.get().reload(
+                        ValueServices.server().reload(
                                 recipeManager,
                                 ServerLifecycleHooks.getCurrentServer().registryAccess(),
                                 true

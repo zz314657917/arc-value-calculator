@@ -3,7 +3,7 @@ package com.liangmu.arcvaluecalc;
 import com.liangmu.arcvaluecalc.command.ArcValueCommands;
 import com.liangmu.arcvaluecalc.config.ArcValueConfig;
 import com.liangmu.arcvaluecalc.network.ArcValueNetwork;
-import com.liangmu.arcvaluecalc.service.ValueService;
+import com.liangmu.arcvaluecalc.service.ValueServices;
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.AddReloadListenerEvent;
@@ -38,7 +38,7 @@ public final class ArcValueCalc {
     }
 
     private void serverStarted(ServerStartedEvent event) {
-        ValueService.get().reload(event.getServer().getRecipeManager(), event.getServer().registryAccess(), true);
+        ValueServices.server().reload(event.getServer().getRecipeManager(), event.getServer().registryAccess(), true);
     }
 
     private void addReloadListener(AddReloadListenerEvent event) {
