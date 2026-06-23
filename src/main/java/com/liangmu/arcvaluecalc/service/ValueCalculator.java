@@ -17,6 +17,7 @@ import net.minecraft.resources.ResourceLocation;
 
 public final class ValueCalculator {
     private static final MathContext MC = MathContext.DECIMAL128;
+    private static final BigDecimal MIN_POSITIVE_VALUE = new BigDecimal("0.0001");
 
     public Result calculate(
             Map<ValueKey, BigDecimal> manualValues,
@@ -27,8 +28,10 @@ public final class ValueCalculator {
     ) {
         Map<ValueKey, ValueEntry> values = new LinkedHashMap<>();
         manualValues.forEach((key, value) -> values.put(key, new ValueEntry(PriceParser.normalizeComputed(value), ValueSource.MANUAL_VALUE)));
-        relax(values, manualRules, tagIndex, maxIterations);
-        relax(values, generatedRules, tagIndex, maxIterations);
+        List<ValueRule> allRules = new ArrayList<>(manualRules.size() + generatedRules.size());
+        allRules.addAll(manualRules);
+        allRules.addAll(generatedRules);
+        relax(values, allRules, tagIndex, maxIterations);
         return new Result(values);
     }
 
@@ -53,7 +56,11 @@ public final class ValueCalculator {
                 }
                 BigDecimal each;
                 try {
-                    each = PriceParser.normalizeComputed(inputValue.divide(BigDecimal.valueOf(outputCount), MC));
+                    each = inputValue.divide(BigDecimal.valueOf(outputCount), MC);
+                    if (each.signum() > 0 && each.compareTo(MIN_POSITIVE_VALUE) < 0) {
+                        each = MIN_POSITIVE_VALUE;
+                    }
+                    PriceParser.validateComputed(each);
                 } catch (IllegalArgumentException e) {
                     ArcValueCalc.LOGGER.warn("Skipping value rule {} because calculated value is out of range", rule.id(), e);
                     continue;

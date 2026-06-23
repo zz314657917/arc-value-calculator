@@ -15,6 +15,7 @@ Forge 1.20.1 item value calculator mod.
 - 客户端单机可本地计算；多人服务器优先使用服务端权威价格。
 - 使用小数价格体系，不使用 EMC 大整数。
 - 价格输入带安全边界：不支持指数，最多 15 位整数和 4 位小数，最大 `1000000000000`。
+- 网络协议版本：`2`，客户端和服务端必须协议严格一致。
 
 ## 兼容版本
 
@@ -25,7 +26,7 @@ Forge 1.20.1 item value calculator mod.
 
 ## 安装
 
-1. 下载或构建 `arcvaluecalc-0.1.0.jar`。
+1. 下载或构建 `arcvaluecalc-0.2.0.jar`。
 2. 放入客户端或服务端的 `mods` 目录。
 3. 启动游戏或服务器。
 4. 首次加载后会生成配置目录：
@@ -63,7 +64,7 @@ config/arcvaluecalc/value_rule/
 价格来源按下面顺序生效：
 
 1. `item_values.json` 固定物品价。
-2. `tag_values.json` 固定标签价，展开到标签内物品，但不覆盖已有物品价。
+2. `tag_values.json` 固定标签价，展开到标签内物品，但不覆盖已有物品价；多个标签命中同一物品时取最低价格。
 3. `value_rule/` 手写规则。
 4. `value_rule_generated/` 自动生成规则。
 
@@ -138,7 +139,7 @@ config/arcvaluecalc/item_values.json
 
 `/arcvalue set` 第一版只按物品 ID 写入固定价，不会自动写 NBT 价格。
 
-价格字段必须写成字符串形式，例如 `"0.45"`。非法条目会被记录到日志；有效条目仍参与计算，但在修复坏条目前，`set/remove/settag/removetag/export values` 会拒绝覆盖配置文件。
+价格字段必须写成字符串形式，例如 `"0.45"`。非法价格或非法 SNBT 会被记录到日志；有效条目仍参与计算，但在修复坏条目前，`set/remove/settag/removetag/export values` 会拒绝覆盖配置文件。
 
 ## 固定标签价格
 
@@ -248,6 +249,7 @@ config/arcvaluecalc/value_rule_generated/
 未知输入不会参与本轮推导。循环配方通过迭代计算稳定最小值。
 
 自动规则会跳过有序配方里的空槽。多候选输入会保留候选集合，并在计算时从已知候选中选择最低成本项。
+内部计算使用高精度小数，只有 tooltip、命令输出和导出时格式化；低于 `0.0001` 的正数推导结果会抬到 `0.0001`，避免零成本链。
 
 ## 命令
 
@@ -319,7 +321,7 @@ F:/mcplugins/mod/arc-value-calculator
 构建产物：
 
 ```text
-build/libs/arcvaluecalc-0.1.0.jar
+build/libs/arcvaluecalc-0.2.0.jar
 ```
 
 ## 当前限制
@@ -329,3 +331,4 @@ build/libs/arcvaluecalc-0.1.0.jar
 - NBT 定价能力存在于数据结构中，但命令只完整管理物品 ID 固定价和标签价。
 - 专服网络同步需要继续做实际多人环境烟测。
 - 仍未处理容器返还物、燃料成本、加工成本和配方环强连通分量检测。
+- 单机逻辑服务端和客户端 fallback 仍共享同一个静态 `ValueService`，后续需要拆分服务端权威服务与客户端本地 fallback。

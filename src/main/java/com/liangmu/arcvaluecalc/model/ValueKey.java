@@ -8,6 +8,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.registries.ForgeRegistries;
 
 public final class ValueKey {
+    public static final int MAX_NBT_CHARS = 8192;
     private final ResourceLocation item;
     private final String nbt;
 
@@ -17,7 +18,11 @@ public final class ValueKey {
 
     public ValueKey(ResourceLocation item, String nbt) {
         this.item = Objects.requireNonNull(item, "item");
-        this.nbt = nbt == null || nbt.isBlank() ? null : nbt;
+        String normalized = nbt == null || nbt.isBlank() ? null : nbt;
+        if (normalized != null && normalized.length() > MAX_NBT_CHARS) {
+            throw new IllegalArgumentException("nbt is too large");
+        }
+        this.nbt = normalized;
     }
 
     public static ValueKey itemOnly(ItemStack stack) {
@@ -63,13 +68,13 @@ public final class ValueKey {
         buffer.writeResourceLocation(item);
         buffer.writeBoolean(nbt != null);
         if (nbt != null) {
-            buffer.writeUtf(nbt);
+            buffer.writeUtf(nbt, MAX_NBT_CHARS);
         }
     }
 
     public static ValueKey read(FriendlyByteBuf buffer) {
         ResourceLocation item = buffer.readResourceLocation();
-        String nbt = buffer.readBoolean() ? buffer.readUtf() : null;
+        String nbt = buffer.readBoolean() ? buffer.readUtf(MAX_NBT_CHARS) : null;
         return new ValueKey(item, nbt);
     }
 

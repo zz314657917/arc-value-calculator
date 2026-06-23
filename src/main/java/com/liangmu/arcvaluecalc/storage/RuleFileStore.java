@@ -22,7 +22,7 @@ public final class RuleFileStore {
     }
 
     public void writeGeneratedRules(List<ValueRule> rules) throws IOException {
-        Path root = ValuePaths.generatedRules();
+        Path root = ValuePaths.generatedRules().toAbsolutePath().normalize();
         if (Files.exists(root)) {
             try (Stream<Path> stream = Files.walk(root)) {
                 List<Path> paths = stream.sorted(Comparator.reverseOrder()).toList();
@@ -36,7 +36,11 @@ public final class RuleFileStore {
         Files.createDirectories(root);
         for (ValueRule rule : rules) {
             String id = sanitize(rule.id());
-            Path path = root.resolve(id + ".json");
+            validateRelativeRulePath(id);
+            Path path = root.resolve(id + ".json").normalize();
+            if (!path.startsWith(root)) {
+                throw new IOException("Generated rule path escapes root: " + id);
+            }
             JsonUtil.write(path, rule.toJson());
         }
     }
@@ -65,7 +69,19 @@ public final class RuleFileStore {
         return rules;
     }
 
-    private String sanitize(String id) {
-        return id.replace(':', '/').replaceAll("[^a-zA-Z0-9_./-]", "_");
+    String sanitize(String id) {
+        return id.replace(':', '/').replaceAll("[^a-zA-Z0-9_/-]", "_");
+    }
+
+    private void validateRelativeRulePath(String id) throws IOException {
+        if (id == null || id.isBlank()) {
+            throw new IOException("Generated rule id is blank");
+        }
+        String[] segments = id.split("/");
+        for (String segment : segments) {
+            if (segment.isBlank() || ".".equals(segment) || "..".equals(segment)) {
+                throw new IOException("Generated rule id contains invalid path segment: " + id);
+            }
+        }
     }
 }

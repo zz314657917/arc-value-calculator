@@ -10,27 +10,32 @@ import net.minecraft.world.item.ItemStack;
 
 public final class ClientValueCache {
     private static final int MAX_ENTRIES = 4096;
+    private static final long UNKNOWN_GENERATION = -1L;
+    private static final long PENDING_TIMEOUT_NANOS = 10_000_000_000L;
     private static final Map<ValueKey, CacheEntry> SERVER_VALUES = new LinkedHashMap<>(128, 0.75F, true);
-    private static long generation;
+    private static long generation = UNKNOWN_GENERATION;
     private static boolean serverAvailable;
 
     private ClientValueCache() {
     }
 
     public static synchronized void reset(long newGeneration) {
+        if (generation != UNKNOWN_GENERATION && newGeneration < generation) {
+            return;
+        }
         SERVER_VALUES.clear();
-        generation = Math.max(generation + 1, newGeneration);
+        generation = newGeneration;
         serverAvailable = false;
     }
 
     public static synchronized void disconnect() {
         SERVER_VALUES.clear();
-        generation++;
+        generation = UNKNOWN_GENERATION;
         serverAvailable = false;
     }
 
     public static synchronized long generation() {
-        return generation;
+        return generation == UNKNOWN_GENERATION ? 0L : generation;
     }
 
     public static synchronized boolean serverAvailable() {
@@ -52,24 +57,38 @@ public final class ClientValueCache {
         return Lookup.notRequested();
     }
 
+    static synchronized Lookup getByKey(ValueKey key) {
+        CacheEntry entry = SERVER_VALUES.get(key);
+        return entry == null ? Lookup.notRequested() : entry.toLookup();
+    }
+
     public static synchronized boolean markPending(ItemStack stack) {
-        ValueKey key = ValueKey.exact(stack);
+        return markPending(ValueKey.exact(stack));
+    }
+
+    static synchronized boolean markPending(ValueKey key) {
         CacheEntry current = SERVER_VALUES.get(key);
-        if (current != null && current.status != Status.NOT_REQUESTED) {
+        if (current != null && current.status != Status.NOT_REQUESTED && !current.isExpiredPending()) {
             return false;
         }
-        put(key, new CacheEntry(Status.PENDING, null, generation));
+        put(key, new CacheEntry(Status.PENDING, null, generation(), System.nanoTime()));
         return true;
     }
 
-    public static synchronized void applyResponse(MatchType matchType, ValueKey resolvedKey, BigDecimal value, long responseGeneration) {
-        serverAvailable = true;
-        if (responseGeneration < generation) {
+    public static synchronized void applyResponse(MatchType matchType, ValueKey requestedKey, ValueKey resolvedKey, BigDecimal value, long responseGeneration) {
+        if (generation != UNKNOWN_GENERATION && responseGeneration < generation) {
             return;
         }
         generation = responseGeneration;
+        serverAvailable = true;
+        if (!requestedKey.equals(resolvedKey)) {
+            CacheEntry requestedEntry = SERVER_VALUES.get(requestedKey);
+            if (requestedEntry != null && requestedEntry.status == Status.PENDING) {
+                SERVER_VALUES.remove(requestedKey);
+            }
+        }
         Status status = matchType == MatchType.MISSING ? Status.KNOWN_MISSING : Status.KNOWN;
-        put(resolvedKey, new CacheEntry(status, value, responseGeneration));
+        put(resolvedKey, new CacheEntry(status, value, responseGeneration, System.nanoTime()));
     }
 
     private static void put(ValueKey key, CacheEntry entry) {
@@ -93,9 +112,13 @@ public final class ClientValueCache {
         }
     }
 
-    private record CacheEntry(Status status, BigDecimal value, long generation) {
+    private record CacheEntry(Status status, BigDecimal value, long generation, long updatedNanos) {
         private Lookup toLookup() {
             return new Lookup(status, Optional.ofNullable(value));
+        }
+
+        private boolean isExpiredPending() {
+            return status == Status.PENDING && System.nanoTime() - updatedNanos >= PENDING_TIMEOUT_NANOS;
         }
     }
 }

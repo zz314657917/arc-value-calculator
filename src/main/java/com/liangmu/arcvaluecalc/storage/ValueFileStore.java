@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.ResourceLocation;
 
 public final class ValueFileStore {
@@ -161,7 +162,7 @@ public final class ValueFileStore {
 
     private ValueKey readKey(JsonObject object, Path path, String location) {
         String item = requireString(object, "item", path, location);
-        String nbt = object.has("nbt") ? requireString(object, "nbt", path, location + ".nbt") : null;
+        String nbt = object.has("nbt") ? normalizeNbt(requireString(object, "nbt", path, location + ".nbt"), path, location + ".nbt") : null;
         return new ValueKey(new ResourceLocation(item), nbt);
     }
 
@@ -191,6 +192,14 @@ public final class ValueFileStore {
             throw new IllegalArgumentException(path + " " + location + " requires string field '" + field + "'");
         }
         return object.get(field).getAsString();
+    }
+
+    private String normalizeNbt(String raw, Path path, String location) {
+        try {
+            return TagParser.parseTag(raw).toString();
+        } catch (Exception e) {
+            throw new IllegalArgumentException(path + " " + location + " invalid nbt: " + e.getMessage(), e);
+        }
     }
 
     private void ensureSeedFile() {

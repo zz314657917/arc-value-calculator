@@ -22,7 +22,7 @@ public final class PriceParser {
             throw new IllegalArgumentException("价格格式无效");
         }
         BigDecimal value = new BigDecimal(normalized);
-        validateValue(value);
+        validateInputValue(value);
         return strip(value);
     }
 
@@ -31,19 +31,31 @@ public final class PriceParser {
         return normalized.toPlainString();
     }
 
+    public static void validateComputed(BigDecimal value) {
+        validateComputedValue(value);
+    }
+
     public static BigDecimal normalizeComputed(BigDecimal value) {
         if (value == null) {
             throw new IllegalArgumentException("价格格式无效");
         }
         BigDecimal scaled = value.setScale(MAX_SCALE, RoundingMode.HALF_UP);
-        validateValue(scaled);
+        validateInputValue(scaled);
         return strip(scaled);
     }
 
-    private static void validateValue(BigDecimal value) {
+    private static void validateInputValue(BigDecimal value) {
         if (value.signum() < 0
                 || value.precision() > 19
                 || value.scale() > MAX_SCALE
+                || value.compareTo(MAX_VALUE) > 0) {
+            throw new IllegalArgumentException("价格超出允许范围");
+        }
+    }
+
+    private static void validateComputedValue(BigDecimal value) {
+        if (value == null
+                || value.signum() < 0
                 || value.compareTo(MAX_VALUE) > 0) {
             throw new IllegalArgumentException("价格超出允许范围");
         }

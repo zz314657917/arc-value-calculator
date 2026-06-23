@@ -217,7 +217,7 @@ public final class ValueService {
                 return;
             }
             for (ValueKey key : keys) {
-                itemValues.putIfAbsent(key, value);
+                itemValues.merge(key, value, (oldValue, newValue) -> newValue.compareTo(oldValue) < 0 ? newValue : oldValue);
             }
         });
     }

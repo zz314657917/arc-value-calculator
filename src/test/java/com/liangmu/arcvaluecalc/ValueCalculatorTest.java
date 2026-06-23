@@ -22,6 +22,7 @@ final class ValueCalculatorTest {
     private final ValueKey nugget = key("minecraft:iron_nugget");
     private final ValueKey block = key("minecraft:iron_block");
     private final ValueKey gear = key("test:gear");
+    private final ValueKey plate = key("test:plate");
 
     @Test
     void manualValuesWinOverRules() {
@@ -142,6 +143,37 @@ final class ValueCalculatorTest {
         Map<ValueKey, ValueEntry> result = calculate(Map.of(iron, new BigDecimal("1.00")), List.of(expensive, cheap), List.of()).values();
         assertValueEquals("1.00", result.get(gear).value());
         assertEquals(ValueSource.MANUAL_RULE, result.get(gear).source());
+    }
+
+    @Test
+    void manualAndGeneratedRulesConvergeTogether() {
+        ValueRule generated = new ValueRule(
+                "generated_gear",
+                List.of(RuleIngredient.item(iron.item(), 1)),
+                List.of(RuleIngredient.item(gear.item(), 1)),
+                ValueSource.GENERATED_RULE
+        );
+        ValueRule manual = new ValueRule(
+                "manual_plate",
+                List.of(RuleIngredient.item(gear.item(), 1)),
+                List.of(RuleIngredient.item(plate.item(), 1)),
+                ValueSource.MANUAL_RULE
+        );
+        Map<ValueKey, ValueEntry> result = calculate(Map.of(iron, new BigDecimal("1.00")), List.of(manual), List.of(generated)).values();
+        assertValueEquals("1.00", result.get(plate).value());
+        assertEquals(ValueSource.MANUAL_RULE, result.get(plate).source());
+    }
+
+    @Test
+    void tinyPositiveOutputsUseMinimumValueInsteadOfZero() {
+        ValueRule rule = new ValueRule(
+                "tiny",
+                List.of(RuleIngredient.item(iron.item(), 1)),
+                List.of(RuleIngredient.item(gear.item(), 3)),
+                ValueSource.GENERATED_RULE
+        );
+        Map<ValueKey, ValueEntry> result = calculate(Map.of(iron, new BigDecimal("0.0001")), List.of(), List.of(rule)).values();
+        assertValueEquals("0.0001", result.get(gear).value());
     }
 
     @Test

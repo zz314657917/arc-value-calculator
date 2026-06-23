@@ -1,5 +1,6 @@
 package com.liangmu.arcvaluecalc.service;
 
+import com.liangmu.arcvaluecalc.ArcValueCalc;
 import com.liangmu.arcvaluecalc.model.RuleIngredient;
 import com.liangmu.arcvaluecalc.model.ValueKey;
 import com.liangmu.arcvaluecalc.model.ValueRule;
@@ -25,9 +26,13 @@ public final class RecipeRuleGenerator {
     public List<ValueRule> generate(RecipeManager recipeManager, RegistryAccess registryAccess) {
         List<ValueRule> rules = new ArrayList<>();
         for (Recipe<?> recipe : recipeManager.getRecipes()) {
-            ValueRule rule = fromRecipe(recipe, registryAccess);
-            if (rule != null) {
-                rules.add(rule);
+            try {
+                ValueRule rule = fromRecipe(recipe, registryAccess);
+                if (rule != null) {
+                    rules.add(rule);
+                }
+            } catch (Exception e) {
+                ArcValueCalc.LOGGER.warn("Skipping recipe {} during value rule generation", recipe.getId(), e);
             }
         }
         return rules;

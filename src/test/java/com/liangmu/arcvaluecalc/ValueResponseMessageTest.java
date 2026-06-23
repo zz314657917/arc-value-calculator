@@ -16,6 +16,7 @@ final class ValueResponseMessageTest {
         FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
         buffer.writeEnum(MatchType.EXACT);
         new ValueKey(new ResourceLocation("minecraft", "diamond"), (String) null).write(buffer);
+        new ValueKey(new ResourceLocation("minecraft", "diamond"), (String) null).write(buffer);
         buffer.writeLong(1L);
         buffer.writeBoolean(true);
         buffer.writeUtf("1e100000000");

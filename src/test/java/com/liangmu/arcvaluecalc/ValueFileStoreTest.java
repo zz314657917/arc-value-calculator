@@ -69,6 +69,24 @@ final class ValueFileStoreTest {
         assertTrue(Files.readString(itemValues, StandardCharsets.UTF_8).contains("minecraft:iron_ingot"));
     }
 
+    @Test
+    void invalidManualNbtBlocksWrites() throws Exception {
+        Path itemValues = tempDir.resolve("item_values.json");
+        Path tagValues = tempDir.resolve("tag_values.json");
+        Files.writeString(itemValues, """
+                [
+                  {"item":"minecraft:diamond_sword","nbt":"{","value":"3.50"},
+                  {"item":"minecraft:gold_ingot","value":"0.20"}
+                ]
+                """, StandardCharsets.UTF_8);
+
+        ValueFileStore store = new ValueFileStore(itemValues, tagValues);
+
+        assertTrue(store.loadManualValues().hasErrors());
+        assertThrows(ConfigWriteBlockedException.class, () -> store.setManualValue(key("minecraft:iron_ingot"), PriceParser.parsePrice("0.11")));
+        assertTrue(Files.readString(itemValues, StandardCharsets.UTF_8).contains("minecraft:gold_ingot"));
+    }
+
     private ValueKey key(String id) {
         return new ValueKey(new ResourceLocation(id), (String) null);
     }
