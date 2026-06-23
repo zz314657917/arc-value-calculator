@@ -1,0 +1,16 @@
+{
+  "arcvaluecalc.tooltip.value": "价值：%s %s",
+  "arcvaluecalc.tooltip.no_value": "该物品暂无价格。",
+  "commands.arcvalue.no_item": "请先把要查询的物品拿在主手。",
+  "commands.arcvalue.no_value": "该物品暂无价格。",
+  "commands.arcvalue.value": "%s 的价格是 %s %s。",
+  "commands.arcvalue.set": "已设置 %s 的固定价格为 %s %s。",
+  "commands.arcvalue.settag": "已设置标签 #%s 的固定价格为 %s %s。",
+  "commands.arcvalue.remove": "已删除 %s 的固定价格。",
+  "commands.arcvalue.removetag": "已删除标签 #%s 的固定价格。",
+  "commands.arcvalue.remove_missing": "%s 没有固定价格。",
+  "commands.arcvalue.removetag_missing": "标签 #%s 没有固定价格。",
+  "commands.arcvalue.reload": "Arc Value Calculator 已重载，当前可用价格 %s 项。",
+  "commands.arcvalue.export": "已导出 %s。",
+  "commands.arcvalue.source": "来源：%s"
+}
