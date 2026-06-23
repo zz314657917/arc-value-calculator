@@ -8,6 +8,6 @@ public final class ValueFormatter {
     }
 
     public static String display(BigDecimal value) {
-        return value.setScale(2, RoundingMode.HALF_UP).toPlainString();
+        return PriceParser.normalizeComputed(value).setScale(2, RoundingMode.HALF_UP).toPlainString();
     }
 }

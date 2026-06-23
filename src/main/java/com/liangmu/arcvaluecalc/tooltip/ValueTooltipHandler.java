@@ -7,8 +7,6 @@ import com.liangmu.arcvaluecalc.network.ArcValueNetwork;
 import com.liangmu.arcvaluecalc.service.ValueFormatter;
 import java.math.BigDecimal;
 import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -20,8 +18,6 @@ import com.liangmu.arcvaluecalc.ArcValueCalc;
 
 @EventBusSubscriber(modid = ArcValueCalc.MOD_ID, value = Dist.CLIENT)
 public final class ValueTooltipHandler {
-    private static final Set<String> REQUESTED = ConcurrentHashMap.newKeySet();
-
     private ValueTooltipHandler() {
     }
 
@@ -36,13 +32,18 @@ public final class ValueTooltipHandler {
         }
         Optional<BigDecimal> value = Optional.empty();
         if (ArcValueConfig.PREFER_SERVER_VALUES.get() && ClientValueCache.serverAvailable()) {
-            value = ClientValueCache.getServerValue(stack);
+            ClientValueCache.Lookup lookup = ClientValueCache.getServerValue(stack);
+            if (lookup.status() == ClientValueCache.Status.KNOWN) {
+                value = lookup.value();
+            } else if (lookup.status() == ClientValueCache.Status.KNOWN_MISSING) {
+                value = Optional.empty();
+            }
         }
-        if (value.isEmpty()) {
+        if (value.isEmpty() && shouldUseLocalFallback(stack)) {
             value = ArcValueApi.getValue(stack);
         }
         if (ArcValueConfig.PREFER_SERVER_VALUES.get()) {
-            requestServerValueOnce(stack);
+            requestServerValue(stack);
         }
         if (value.isPresent()) {
             event.getToolTip().add(Component.translatable(
@@ -55,9 +56,16 @@ public final class ValueTooltipHandler {
         }
     }
 
-    private static void requestServerValueOnce(ItemStack stack) {
-        String key = stack.getItem().toString() + "|" + (stack.getTag() == null ? "" : stack.getTag());
-        if (REQUESTED.add(key)) {
+    private static boolean shouldUseLocalFallback(ItemStack stack) {
+        if (!ArcValueConfig.PREFER_SERVER_VALUES.get() || !ClientValueCache.serverAvailable()) {
+            return true;
+        }
+        ClientValueCache.Lookup lookup = ClientValueCache.getServerValue(stack);
+        return lookup.status() == ClientValueCache.Status.NOT_REQUESTED || lookup.status() == ClientValueCache.Status.PENDING;
+    }
+
+    private static void requestServerValue(ItemStack stack) {
+        if (ClientValueCache.markPending(stack)) {
             ArcValueNetwork.requestValue(stack);
         }
     }

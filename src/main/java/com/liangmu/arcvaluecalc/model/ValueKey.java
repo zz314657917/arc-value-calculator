@@ -1,6 +1,7 @@
 package com.liangmu.arcvaluecalc.model;
 
 import java.util.Objects;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -56,6 +57,20 @@ public final class ValueKey {
             return true;
         }
         return nbt.equals(stack.getTag() == null ? null : stack.getTag().toString());
+    }
+
+    public void write(FriendlyByteBuf buffer) {
+        buffer.writeResourceLocation(item);
+        buffer.writeBoolean(nbt != null);
+        if (nbt != null) {
+            buffer.writeUtf(nbt);
+        }
+    }
+
+    public static ValueKey read(FriendlyByteBuf buffer) {
+        ResourceLocation item = buffer.readResourceLocation();
+        String nbt = buffer.readBoolean() ? buffer.readUtf() : null;
+        return new ValueKey(item, nbt);
     }
 
     @Override

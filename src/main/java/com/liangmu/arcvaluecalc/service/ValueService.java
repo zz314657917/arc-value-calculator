@@ -2,13 +2,19 @@ package com.liangmu.arcvaluecalc.service;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.liangmu.arcvaluecalc.ArcValueCalc;
 import com.liangmu.arcvaluecalc.config.ArcValueConfig;
+import com.liangmu.arcvaluecalc.model.MatchType;
 import com.liangmu.arcvaluecalc.model.ValueEntry;
 import com.liangmu.arcvaluecalc.model.ValueKey;
+import com.liangmu.arcvaluecalc.model.ValueLookupResult;
 import com.liangmu.arcvaluecalc.model.ValueRule;
 import com.liangmu.arcvaluecalc.model.ValueSource;
 import com.liangmu.arcvaluecalc.network.ArcValueNetwork;
+import com.liangmu.arcvaluecalc.storage.ConfigDiagnostic;
+import com.liangmu.arcvaluecalc.storage.ConfigWriteBlockedException;
 import com.liangmu.arcvaluecalc.storage.JsonUtil;
+import com.liangmu.arcvaluecalc.storage.LoadResult;
 import com.liangmu.arcvaluecalc.storage.RuleFileStore;
 import com.liangmu.arcvaluecalc.storage.ValueFileStore;
 import com.liangmu.arcvaluecalc.storage.ValuePaths;
@@ -16,6 +22,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +44,8 @@ public final class ValueService {
     private final ValueCalculator calculator = new ValueCalculator();
     private Map<ValueKey, ValueEntry> values = new LinkedHashMap<>();
     private Map<ValueKey, BigDecimal> manualValues = new LinkedHashMap<>();
+    private List<ConfigDiagnostic> configDiagnostics = List.of();
+    private long generation;
 
     private ValueService() {
     }
@@ -46,15 +55,22 @@ public final class ValueService {
     }
 
     public synchronized void reload(RecipeManager recipeManager, RegistryAccess registryAccess, boolean notifyClients) {
-        manualValues = valueFileStore.loadManualValues();
+        LoadResult<ValueKey, BigDecimal> manualResult = valueFileStore.loadManualValues();
+        LoadResult<ResourceLocation, BigDecimal> tagResult = valueFileStore.loadTagValues();
+        List<ConfigDiagnostic> diagnostics = new ArrayList<>();
+        diagnostics.addAll(manualResult.diagnostics());
+        diagnostics.addAll(tagResult.diagnostics());
+        configDiagnostics = List.copyOf(diagnostics);
+        manualValues = new LinkedHashMap<>(manualResult.values());
         Map<ResourceLocation, Set<ValueKey>> tagIndex = tagIndexBuilder.build();
-        expandTagValues(manualValues, valueFileStore.loadTagValues(), tagIndex);
+        expandTagValues(manualValues, tagResult.values(), tagIndex);
         List<ValueRule> manualRules = ruleFileStore.loadManualRules();
         List<ValueRule> generatedRules = recipeManager == null ? ruleFileStore.loadGeneratedRules() : recipeRuleGenerator.generate(recipeManager, registryAccess);
         if (recipeManager != null && ArcValueConfig.GENERATE_RULE_FILES.get()) {
             try {
                 ruleFileStore.writeGeneratedRules(generatedRules);
-            } catch (IOException ignored) {
+            } catch (IOException e) {
+                ArcValueCalc.LOGGER.error("Failed to write generated value rules", e);
             }
         }
         values = calculator.calculate(
@@ -64,8 +80,9 @@ public final class ValueService {
                 tagIndex,
                 ArcValueConfig.MAX_ITERATIONS.get()
         ).values();
+        generation++;
         if (notifyClients) {
-            ArcValueNetwork.sendReload();
+            ArcValueNetwork.sendReload(generation);
         }
     }
 
@@ -76,6 +93,20 @@ public final class ValueService {
         }
         ValueEntry itemOnly = values.get(ValueKey.itemOnly(stack));
         return itemOnly == null ? Optional.empty() : Optional.of(itemOnly.value());
+    }
+
+    public synchronized ValueLookupResult lookup(ItemStack stack) {
+        ValueKey exactKey = ValueKey.exact(stack);
+        ValueEntry exact = values.get(exactKey);
+        if (exact != null) {
+            return new ValueLookupResult(MatchType.EXACT, exactKey, exact.value(), generation);
+        }
+        ValueKey itemOnlyKey = ValueKey.itemOnly(stack);
+        ValueEntry itemOnly = values.get(itemOnlyKey);
+        if (itemOnly != null) {
+            return new ValueLookupResult(MatchType.ITEM_ONLY, itemOnlyKey, itemOnly.value(), generation);
+        }
+        return ValueLookupResult.missing(exactKey, generation);
     }
 
     public synchronized ValueSource getSource(ItemStack stack) {
@@ -120,6 +151,8 @@ public final class ValueService {
     }
 
     public synchronized Path exportValues() throws IOException {
+        refreshConfigDiagnostics();
+        ensureNoConfigErrors();
         Files.createDirectories(ValuePaths.exportDir());
         Path path = ValuePaths.exportDir().resolve("values_export.json");
         JsonArray array = new JsonArray();
@@ -131,7 +164,7 @@ public final class ValueService {
                     if (entry.getKey().nbt() != null) {
                         object.addProperty("nbt", entry.getKey().nbt());
                     }
-                    object.addProperty("value", entry.getValue().value().stripTrailingZeros().toPlainString());
+                    object.addProperty("value", PriceParser.toPlainString(entry.getValue().value()));
                     object.addProperty("source", entry.getValue().source().name());
                     array.add(object);
                 });
@@ -141,6 +174,29 @@ public final class ValueService {
 
     public Path exportRules() {
         return ValuePaths.generatedRules();
+    }
+
+    public synchronized long generation() {
+        return generation;
+    }
+
+    public synchronized List<ConfigDiagnostic> configDiagnostics() {
+        return configDiagnostics;
+    }
+
+    private void ensureNoConfigErrors() throws ConfigWriteBlockedException {
+        if (!configDiagnostics.isEmpty()) {
+            throw new ConfigWriteBlockedException(configDiagnostics);
+        }
+    }
+
+    private void refreshConfigDiagnostics() {
+        LoadResult<ValueKey, BigDecimal> manualResult = valueFileStore.loadManualValues();
+        LoadResult<ResourceLocation, BigDecimal> tagResult = valueFileStore.loadTagValues();
+        List<ConfigDiagnostic> diagnostics = new ArrayList<>();
+        diagnostics.addAll(manualResult.diagnostics());
+        diagnostics.addAll(tagResult.diagnostics());
+        configDiagnostics = List.copyOf(diagnostics);
     }
 
     private RegistryAccess currentRegistryAccess() {

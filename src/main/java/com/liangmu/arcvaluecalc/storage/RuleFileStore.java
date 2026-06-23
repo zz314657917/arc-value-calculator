@@ -1,6 +1,7 @@
 package com.liangmu.arcvaluecalc.storage;
 
 import com.google.gson.JsonElement;
+import com.liangmu.arcvaluecalc.ArcValueCalc;
 import com.liangmu.arcvaluecalc.model.ValueRule;
 import com.liangmu.arcvaluecalc.model.ValueSource;
 import java.io.IOException;
@@ -54,10 +55,12 @@ public final class RuleFileStore {
                     JsonElement element = JsonUtil.read(path);
                     String id = root.relativize(path).toString().replace('\\', '/').replaceAll("\\.json$", "");
                     rules.add(ValueRule.fromJson(id, element.getAsJsonObject(), source));
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    ArcValueCalc.LOGGER.error("Failed to load value rule {}", path, e);
                 }
             }
-        } catch (IOException ignored) {
+        } catch (IOException e) {
+            ArcValueCalc.LOGGER.error("Failed to scan value rule directory {}", root, e);
         }
         return rules;
     }

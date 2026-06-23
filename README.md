@@ -14,6 +14,7 @@ Forge 1.20.1 item value calculator mod.
 - 支持 `/arcvalue` 命令查询、设置、删除、重载和导出。
 - 客户端单机可本地计算；多人服务器优先使用服务端权威价格。
 - 使用小数价格体系，不使用 EMC 大整数。
+- 价格输入带安全边界：不支持指数，最多 15 位整数和 4 位小数，最大 `1000000000000`。
 
 ## 兼容版本
 
@@ -67,6 +68,8 @@ config/arcvaluecalc/value_rule/
 4. `value_rule_generated/` 自动生成规则。
 
 手写配置永远优先于自动生成结果。
+
+`item_values.json` 和 `tag_values.json` 只在文件不存在时写入默认内容。文件存在后，重启或 `/arcvalue reload` 不会把被删除的默认基础价重新补回。
 
 ## 配置文件
 
@@ -134,6 +137,8 @@ config/arcvaluecalc/item_values.json
 ```
 
 `/arcvalue set` 第一版只按物品 ID 写入固定价，不会自动写 NBT 价格。
+
+价格字段必须写成字符串形式，例如 `"0.45"`。非法条目会被记录到日志；有效条目仍参与计算，但在修复坏条目前，`set/remove/settag/removetag/export values` 会拒绝覆盖配置文件。
 
 ## 固定标签价格
 
@@ -242,6 +247,8 @@ config/arcvaluecalc/value_rule_generated/
 
 未知输入不会参与本轮推导。循环配方通过迭代计算稳定最小值。
 
+自动规则会跳过有序配方里的空槽。多候选输入会保留候选集合，并在计算时从已知候选中选择最低成本项。
+
 ## 命令
 
 查询手持物品价格：
@@ -318,6 +325,7 @@ build/libs/arcvaluecalc-0.1.0.jar
 ## 当前限制
 
 - 第一版不适配 Mekanism、GTCEu、匠魂、植物魔法等机器配方。
-- 多候选 `Ingredient` 的自动规则仍是近似处理；需要精确定价时优先写 tag 价或手写规则。
+- 多候选 `Ingredient` 已按候选最低成本估值；复杂语义仍建议写 tag 价或手写规则。
 - NBT 定价能力存在于数据结构中，但命令只完整管理物品 ID 固定价和标签价。
 - 专服网络同步需要继续做实际多人环境烟测。
+- 仍未处理容器返还物、燃料成本、加工成本和配方环强连通分量检测。

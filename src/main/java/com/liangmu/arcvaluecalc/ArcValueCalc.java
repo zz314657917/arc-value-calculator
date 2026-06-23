@@ -4,6 +4,7 @@ import com.liangmu.arcvaluecalc.command.ArcValueCommands;
 import com.liangmu.arcvaluecalc.config.ArcValueConfig;
 import com.liangmu.arcvaluecalc.network.ArcValueNetwork;
 import com.liangmu.arcvaluecalc.service.ValueService;
+import com.mojang.logging.LogUtils;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.AddReloadListenerEvent;
 import net.minecraftforge.event.RegisterCommandsEvent;
@@ -13,10 +14,12 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import org.slf4j.Logger;
 
 @Mod(ArcValueCalc.MOD_ID)
 public final class ArcValueCalc {
     public static final String MOD_ID = "arcvaluecalc";
+    public static final Logger LOGGER = LogUtils.getLogger();
 
     public ArcValueCalc() {
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, ArcValueConfig.SPEC);

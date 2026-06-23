@@ -5,8 +5,10 @@ import com.liangmu.arcvaluecalc.model.ValueEntry;
 import com.liangmu.arcvaluecalc.model.ValueKey;
 import com.liangmu.arcvaluecalc.model.ValueRule;
 import com.liangmu.arcvaluecalc.model.ValueSource;
+import com.liangmu.arcvaluecalc.ArcValueCalc;
 import java.math.BigDecimal;
 import java.math.MathContext;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,9 +26,9 @@ public final class ValueCalculator {
             int maxIterations
     ) {
         Map<ValueKey, ValueEntry> values = new LinkedHashMap<>();
-        manualValues.forEach((key, value) -> values.put(key, new ValueEntry(value, ValueSource.MANUAL_VALUE)));
-        relax(values, manualRules, tagIndex, maxIterations, true);
-        relax(values, generatedRules, tagIndex, maxIterations, false);
+        manualValues.forEach((key, value) -> values.put(key, new ValueEntry(PriceParser.normalizeComputed(value), ValueSource.MANUAL_VALUE)));
+        relax(values, manualRules, tagIndex, maxIterations);
+        relax(values, generatedRules, tagIndex, maxIterations);
         return new Result(values);
     }
 
@@ -34,36 +36,40 @@ public final class ValueCalculator {
             Map<ValueKey, ValueEntry> values,
             List<ValueRule> rules,
             Map<ResourceLocation, Set<ValueKey>> tagIndex,
-            int maxIterations,
-            boolean overwriteGenerated
+            int maxIterations
     ) {
+        List<String> lastChanged = new ArrayList<>();
         for (int i = 0; i < maxIterations; i++) {
             boolean changed = false;
+            lastChanged.clear();
             for (ValueRule rule : rules) {
                 BigDecimal inputValue = inputValue(rule.inputs(), values, tagIndex);
                 if (inputValue == null) {
                     continue;
                 }
-                int outputCount = rule.outputs().stream().mapToInt(RuleIngredient::count).sum();
+                long outputCount = rule.outputs().stream().mapToLong(RuleIngredient::count).sum();
                 if (outputCount <= 0) {
                     continue;
                 }
-                BigDecimal each = inputValue.divide(BigDecimal.valueOf(outputCount), MC);
+                BigDecimal each;
+                try {
+                    each = PriceParser.normalizeComputed(inputValue.divide(BigDecimal.valueOf(outputCount), MC));
+                } catch (IllegalArgumentException e) {
+                    ArcValueCalc.LOGGER.warn("Skipping value rule {} because calculated value is out of range", rule.id(), e);
+                    continue;
+                }
                 for (RuleIngredient output : rule.outputs()) {
                     ValueKey outputKey = output.asKey();
                     if (outputKey == null) {
                         continue;
                     }
                     ValueEntry existing = values.get(outputKey);
-                    if (existing != null && existing.source() == ValueSource.MANUAL_VALUE) {
-                        continue;
-                    }
-                    if (existing != null && existing.source() == ValueSource.MANUAL_RULE && rule.source() == ValueSource.GENERATED_RULE) {
-                        continue;
-                    }
-                    if (existing == null || overwriteGenerated || each.compareTo(existing.value()) < 0) {
+                    if (shouldReplace(existing, each, rule.source())) {
                         values.put(outputKey, new ValueEntry(each, rule.source()));
                         changed = true;
+                        if (lastChanged.size() < 10) {
+                            lastChanged.add(outputKey + " via " + rule.id());
+                        }
                     }
                 }
             }
@@ -71,6 +77,30 @@ public final class ValueCalculator {
                 return;
             }
         }
+        if (!lastChanged.isEmpty()) {
+            ArcValueCalc.LOGGER.warn("Value calculation reached maxIterations. Still changing: {}", lastChanged);
+        }
+    }
+
+    private boolean shouldReplace(ValueEntry existing, BigDecimal value, ValueSource newSource) {
+        if (existing == null) {
+            return true;
+        }
+        int oldPriority = priority(existing.source());
+        int newPriority = priority(newSource);
+        if (newPriority > oldPriority) {
+            return true;
+        }
+        return newPriority == oldPriority && value.compareTo(existing.value()) < 0;
+    }
+
+    private int priority(ValueSource source) {
+        return switch (source) {
+            case MANUAL_VALUE -> 3;
+            case MANUAL_RULE -> 2;
+            case GENERATED_RULE -> 1;
+            case SERVER, NONE -> 0;
+        };
     }
 
     private BigDecimal inputValue(
@@ -83,6 +113,8 @@ public final class ValueCalculator {
             BigDecimal value;
             if (input.isTag()) {
                 value = bestTagValue(input.tag(), values, tagIndex);
+            } else if (input.isChoices()) {
+                value = bestChoiceValue(input.choices(), values);
             } else {
                 ValueEntry entry = values.get(input.asKey());
                 value = entry == null ? null : entry.value();
@@ -93,6 +125,20 @@ public final class ValueCalculator {
             total = total.add(value.multiply(BigDecimal.valueOf(input.count()), MC), MC);
         }
         return total;
+    }
+
+    private BigDecimal bestChoiceValue(List<ValueKey> choices, Map<ValueKey, ValueEntry> values) {
+        BigDecimal best = null;
+        for (ValueKey choice : choices) {
+            ValueEntry entry = values.get(choice);
+            if (entry == null) {
+                continue;
+            }
+            if (best == null || entry.value().compareTo(best) < 0) {
+                best = entry.value();
+            }
+        }
+        return best;
     }
 
     private BigDecimal bestTagValue(

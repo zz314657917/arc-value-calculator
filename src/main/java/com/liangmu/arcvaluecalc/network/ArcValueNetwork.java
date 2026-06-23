@@ -53,9 +53,9 @@ public final class ArcValueNetwork {
         }
     }
 
-    public static void sendReload() {
+    public static void sendReload(long generation) {
         if (channel != null) {
-            channel.send(PacketDistributor.ALL.noArg(), new ReloadValuesMessage());
+            channel.send(PacketDistributor.ALL.noArg(), new ReloadValuesMessage(generation));
         }
     }
 

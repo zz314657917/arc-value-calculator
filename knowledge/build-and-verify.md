@@ -30,8 +30,11 @@
   - 无价格：默认不显示价格行。
 - 执行：
   - `/arcvalue set 0.45`
+  - `/arcvalue set 1e100000000` 应被拒绝
   - `/arcvalue remove`
   - `/arcvalue settag minecraft:logs 0.04`
   - `/arcvalue removetag minecraft:logs`
   - `/arcvalue export values`
   - `/arcvalue export rules`
+- 手动修改 `item_values.json` 删除默认项后执行 `/arcvalue reload`，确认默认项不会自动复活。
+- 临时加入坏价格条目后执行修改命令，确认命令拒绝覆盖配置且日志指出数组索引。

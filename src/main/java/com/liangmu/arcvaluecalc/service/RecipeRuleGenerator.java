@@ -1,10 +1,13 @@
 package com.liangmu.arcvaluecalc.service;
 
 import com.liangmu.arcvaluecalc.model.RuleIngredient;
+import com.liangmu.arcvaluecalc.model.ValueKey;
 import com.liangmu.arcvaluecalc.model.ValueRule;
 import com.liangmu.arcvaluecalc.model.ValueSource;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -40,11 +43,17 @@ public final class RecipeRuleGenerator {
         }
         List<RuleIngredient> inputs = new ArrayList<>();
         for (Ingredient ingredient : recipe.getIngredients()) {
+            if (ingredient.isEmpty()) {
+                continue;
+            }
             RuleIngredient input = fromIngredient(ingredient);
             if (input == null) {
                 return null;
             }
             inputs.add(input);
+        }
+        if (inputs.isEmpty()) {
+            return null;
         }
         ItemStack result = recipe.getResultItem(registryAccess);
         if (result.isEmpty()) {
@@ -68,13 +77,17 @@ public final class RecipeRuleGenerator {
             stack.setCount(1);
             return RuleIngredient.fromStack(stack);
         }
-        // Multi-item ingredients are represented as the first available item in v1 generated rules.
-        // Manual rules can use tags when a pack wants explicit ore/tag semantics.
-        ItemStack stack = items[0].copy();
-        stack.setCount(1);
-        if (ForgeRegistries.ITEMS.getKey(stack.getItem()) == null) {
+        Set<ValueKey> choices = new LinkedHashSet<>();
+        for (ItemStack item : items) {
+            ItemStack stack = item.copy();
+            stack.setCount(1);
+            if (ForgeRegistries.ITEMS.getKey(stack.getItem()) != null) {
+                choices.add(RuleIngredient.fromStack(stack).asKey());
+            }
+        }
+        if (choices.isEmpty()) {
             return null;
         }
-        return RuleIngredient.fromStack(stack);
+        return RuleIngredient.choices(List.copyOf(choices), 1);
     }
 }

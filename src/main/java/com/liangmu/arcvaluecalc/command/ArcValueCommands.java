@@ -2,11 +2,11 @@ package com.liangmu.arcvaluecalc.command;
 
 import com.liangmu.arcvaluecalc.config.ArcValueConfig;
 import com.liangmu.arcvaluecalc.model.ValueKey;
+import com.liangmu.arcvaluecalc.service.PriceParser;
 import com.liangmu.arcvaluecalc.service.ValueFormatter;
 import com.liangmu.arcvaluecalc.service.ValueService;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import java.math.BigDecimal;
 import java.nio.file.Path;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -86,11 +86,7 @@ public final class ArcValueCommands {
         }
         try {
             ValueKey key = ValueKey.itemOnly(stack);
-            BigDecimal value = new BigDecimal(price);
-            if (value.signum() < 0) {
-                source.sendFailure(Component.literal("price must be >= 0"));
-                return 0;
-            }
+            var value = PriceParser.parsePrice(price);
             ValueService.get().setManualValue(key, value, source.getServer().getRecipeManager());
             source.sendSuccess(() -> Component.translatable(
                     "commands.arcvalue.set",
@@ -129,11 +125,7 @@ public final class ArcValueCommands {
     private static int setTag(CommandSourceStack source, String tagText, String price) {
         try {
             ResourceLocation tag = parseTag(tagText);
-            BigDecimal value = new BigDecimal(price);
-            if (value.signum() < 0) {
-                source.sendFailure(Component.literal("price must be >= 0"));
-                return 0;
-            }
+            var value = PriceParser.parsePrice(price);
             ValueService.get().setTagValue(tag, value, source.getServer().getRecipeManager());
             source.sendSuccess(() -> Component.translatable(
                     "commands.arcvalue.settag",

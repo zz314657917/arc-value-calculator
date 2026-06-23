@@ -1,8 +1,6 @@
 package com.liangmu.arcvaluecalc.network;
 
 import com.liangmu.arcvaluecalc.service.ValueService;
-import java.math.BigDecimal;
-import java.util.Optional;
 import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
@@ -28,8 +26,7 @@ public final class ValueRequestMessage {
         NetworkEvent.Context context = contextSupplier.get();
         ServerPlayer player = context.getSender();
         if (player != null) {
-            Optional<BigDecimal> value = ValueService.get().getValue(message.stack);
-            ArcValueNetwork.sendValue(player, new ValueResponseMessage(message.stack, value.orElse(null)));
+            ArcValueNetwork.sendValue(player, ValueResponseMessage.fromLookup(ValueService.get().lookup(message.stack)));
         }
         context.setPacketHandled(true);
     }

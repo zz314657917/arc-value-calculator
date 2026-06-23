@@ -15,6 +15,7 @@ import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class ValueCalculatorTest {
     private final ValueKey iron = key("minecraft:iron_ingot");
@@ -35,7 +36,7 @@ final class ValueCalculatorTest {
                 block, new BigDecimal("99.00")
         );
         Map<ValueKey, ValueEntry> result = calculate(manual, List.of(), List.of(rule)).values();
-        assertEquals(new BigDecimal("99.00"), result.get(block).value());
+        assertValueEquals("99.00", result.get(block).value());
         assertEquals(ValueSource.MANUAL_VALUE, result.get(block).source());
     }
 
@@ -48,7 +49,7 @@ final class ValueCalculatorTest {
                 ValueSource.GENERATED_RULE
         );
         Map<ValueKey, ValueEntry> result = calculate(Map.of(nugget, new BigDecimal("0.01")), List.of(), List.of(rule)).values();
-        assertEquals(new BigDecimal("0.09"), result.get(iron).value());
+        assertValueEquals("0.09", result.get(iron).value());
     }
 
     @Test
@@ -66,7 +67,7 @@ final class ValueCalculatorTest {
                 ValueSource.GENERATED_RULE
         );
         Map<ValueKey, ValueEntry> result = calculate(Map.of(iron, new BigDecimal("1.00")), List.of(manualRule), List.of(generatedRule)).values();
-        assertEquals(new BigDecimal("2.00"), result.get(gear).value());
+        assertValueEquals("2.00", result.get(gear).value());
         assertEquals(ValueSource.MANUAL_RULE, result.get(gear).source());
     }
 
@@ -87,7 +88,7 @@ final class ValueCalculatorTest {
         Map<ValueKey, ValueEntry> result = new ValueCalculator()
                 .calculate(manual, List.of(), List.of(rule), tags, 16)
                 .values();
-        assertEquals(new BigDecimal("2.00"), result.get(gear).value());
+        assertValueEquals("2.00", result.get(gear).value());
     }
 
     @Test
@@ -104,7 +105,43 @@ final class ValueCalculatorTest {
                 ValueSource.GENERATED_RULE
         );
         Map<ValueKey, ValueEntry> result = calculate(manual, List.of(), List.of(rule)).values();
-        assertEquals(new BigDecimal("0.01"), result.get(key("minecraft:spruce_planks")).value());
+        assertValueEquals("0.01", result.get(key("minecraft:spruce_planks")).value());
+    }
+
+    @Test
+    void choicesUseCheapestKnownCandidate() {
+        ValueKey copper = key("minecraft:copper_ingot");
+        ValueRule rule = new ValueRule(
+                "choice",
+                List.of(RuleIngredient.choices(List.of(iron, copper), 1)),
+                List.of(RuleIngredient.item(gear.item(), 1)),
+                ValueSource.GENERATED_RULE
+        );
+        Map<ValueKey, BigDecimal> manual = Map.of(
+                iron, new BigDecimal("1.00"),
+                copper, new BigDecimal("0.30")
+        );
+        Map<ValueKey, ValueEntry> result = calculate(manual, List.of(), List.of(rule)).values();
+        assertValueEquals("0.30", result.get(gear).value());
+    }
+
+    @Test
+    void samePriorityRulesUseLowestCost() {
+        ValueRule expensive = new ValueRule(
+                "expensive",
+                List.of(RuleIngredient.item(iron.item(), 2)),
+                List.of(RuleIngredient.item(gear.item(), 1)),
+                ValueSource.MANUAL_RULE
+        );
+        ValueRule cheap = new ValueRule(
+                "cheap",
+                List.of(RuleIngredient.item(iron.item(), 1)),
+                List.of(RuleIngredient.item(gear.item(), 1)),
+                ValueSource.MANUAL_RULE
+        );
+        Map<ValueKey, ValueEntry> result = calculate(Map.of(iron, new BigDecimal("1.00")), List.of(expensive, cheap), List.of()).values();
+        assertValueEquals("1.00", result.get(gear).value());
+        assertEquals(ValueSource.MANUAL_RULE, result.get(gear).source());
     }
 
     @Test
@@ -119,5 +156,9 @@ final class ValueCalculatorTest {
 
     private ValueKey key(String id) {
         return new ValueKey(new ResourceLocation(id), (String) null);
+    }
+
+    private void assertValueEquals(String expected, BigDecimal actual) {
+        assertTrue(new BigDecimal(expected).compareTo(actual) == 0, "expected " + expected + " but was " + actual);
     }
 }

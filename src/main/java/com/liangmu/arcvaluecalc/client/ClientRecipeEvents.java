@@ -5,6 +5,7 @@ import com.liangmu.arcvaluecalc.service.ValueService;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RecipesUpdatedEvent;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 
@@ -19,5 +20,10 @@ public final class ClientRecipeEvents {
         if (minecraft.level != null) {
             ValueService.get().reload(event.getRecipeManager(), minecraft.level.registryAccess(), false);
         }
+    }
+
+    @SubscribeEvent
+    public static void onLoggedOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        ClientValueCache.disconnect();
     }
 }
