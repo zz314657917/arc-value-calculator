@@ -80,7 +80,7 @@ config/arcvaluecalc-common.toml
 
 ```toml
 showTooltip = true
-showUnknown = true
+showUnknown = false
 valueUnit = "枫币"
 preferServerValues = true
 generateRuleFiles = true
@@ -91,7 +91,7 @@ adminPermissionLevel = 2
 说明：
 
 - `showTooltip`：是否显示价格 tooltip。
-- `showUnknown`：未知价格是否显示红色 `该物品暂无价格。`。
+- `showUnknown`：未知价格是否显示红色 `该物品暂无价格。`，默认不显示。
 - `valueUnit`：价格单位显示文本。
 - `preferServerValues`：多人服务器优先使用服务端价格。
 - `generateRuleFiles`：是否落盘自动生成规则。

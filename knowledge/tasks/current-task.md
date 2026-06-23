@@ -15,6 +15,7 @@
 - 实现 item 固定价、tag 固定价、手写规则、自动规则生成、tooltip、命令和基础网络同步。
 - 构建产物已复制到 ArcartX 1.20.1 客户端 `mods` 目录。
 - 新建仓库知识库和 P/G/E 文档。
+- 按运行截图反馈关闭未知价格 tooltip 默认显示；当前客户端配置也已改为 `showUnknown = false`。
 
 ## 已确认事实
 
@@ -22,6 +23,7 @@
 - `./gradlew.bat build` 通过。
 - 当前 1.20.1 不使用旧矿辞 OreDictionary，按 item tags 支持。
 - `value_rule_generated` 可以覆盖，手写规则应放 `value_rule`。
+- 无价格物品默认不显示 tooltip 提示；`/arcvalue get` 查询未知价格时仍会返回命令反馈。
 
 ## 待验证点
 
@@ -37,7 +39,7 @@
 ## 下一步
 
 - 重启客户端 -> 验证: 进入游戏无崩溃。
-- 执行 `/arcvalue reload` -> 验证: 聊天显示可用价格数量，tooltip 有价格或暂无价格提示。
+- 执行 `/arcvalue reload` -> 验证: 聊天显示可用价格数量，有价格物品显示价格，无价格物品不显示价格行。
 - 根据手测缺口补基础 tag 价或手写规则 -> 验证: 对应物品 tooltip 正确显示。
 
 ## 验证记录
@@ -45,3 +47,4 @@
 - 2026-06-23：`./gradlew.bat test` 通过。
 - 2026-06-23：`./gradlew.bat build` 通过。
 - 2026-06-23：jar 已复制到 `G:/MC/game/ArcartXDev1201Client/.minecraft/versions/1.20.1-Forge_47.3.0/mods/arcvaluecalc-0.1.0.jar`。
+- 2026-06-23：关闭未知价格 tooltip 默认显示后，`./gradlew.bat test` 和 `./gradlew.bat build` 通过，新 jar 已覆盖到当前客户端 mods 目录。

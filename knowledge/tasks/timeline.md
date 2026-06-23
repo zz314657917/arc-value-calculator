@@ -1,3 +1,13 @@
+## 2026-06-23 10:57 +08:00 - 关闭未知价格 tooltip 默认显示
+
+- 当前阶段：首版运行期细节调整，减少无价格物品 tooltip 干扰。
+- 本段重点：将 `showUnknown` 默认值改为 `false`；同步 README、知识库和当前客户端已生成配置。
+- 已完成：源码默认配置、README、`knowledge/00-start-here.md`、`knowledge/build-and-verify.md`、`current-task.md` 已更新；新版 jar 已覆盖到 ArcartX 1.20.1 客户端 mods 目录。
+- 关键决策：无价格物品默认不显示 tooltip 行；`/arcvalue get` 对未知价格仍保留命令反馈。
+- 验证记录：`./gradlew.bat test` 通过；`./gradlew.bat build` 通过；客户端 `arcvaluecalc-common.toml` 已改为 `showUnknown = false`。
+- 遗留问题：仍需重启客户端确认截图中的红色未知价格行消失；专服同步仍未烟测。
+- 下一步：重启客户端并悬停未知价格物品；验证无价格 tooltip 不再出现；继续检查有价格物品仍显示 `价值：xx 枫币`。
+
 ## 2026-06-23 01:25 +08:00 - 首版 MVP 与知识库初始化
 
 - 当前阶段：首版物价计算模组已实现，进入运行期手测与规则完善。

@@ -21,7 +21,7 @@
 - 固定标签价：`config/arcvaluecalc/tag_values.json`
 - 手写规则：`config/arcvaluecalc/value_rule/**/*.json`
 - 自动生成规则：`config/arcvaluecalc/value_rule_generated/**/*.json`
-- tooltip 默认显示两位小数和单位，未知价格默认显示红色“该物品暂无价格。”。
+- tooltip 默认显示两位小数和单位，未知价格默认不显示。
 
 ## 当前已知边界
 

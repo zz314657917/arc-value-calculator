@@ -19,7 +19,7 @@ public final class ArcValueConfig {
         SHOW_TOOLTIP = builder.comment("Show item value in tooltips.")
                 .define("showTooltip", true);
         SHOW_UNKNOWN = builder.comment("Show an unknown-value tooltip line for items without calculated values.")
-                .define("showUnknown", true);
+                .define("showUnknown", false);
         VALUE_UNIT = builder.comment("Displayed unit after the value, for example 枫币.")
                 .define("valueUnit", "枫币");
         builder.pop();
