@@ -15,7 +15,7 @@ Forge 1.20.1 item value calculator mod.
 - 客户端单机可本地计算；多人服务器优先使用服务端权威价格。
 - 使用小数价格体系，不使用 EMC 大整数。
 - 价格输入带安全边界：不支持指数，最多 15 位整数和 4 位小数，最大 `1000000000000`。
-- 网络协议版本：`2`，客户端和服务端必须协议严格一致。
+- 网络协议版本：`3`，客户端和服务端必须协议严格一致。
 
 ## 兼容版本
 
@@ -26,8 +26,8 @@ Forge 1.20.1 item value calculator mod.
 
 ## 安装
 
-1. 下载或构建 `arcvaluecalc-0.2.0.jar`。
-2. 放入客户端或服务端的 `mods` 目录。
+1. 下载或构建 `arcvaluecalc-0.2.1.jar`。
+2. 单人游戏放入客户端 `mods` 目录；多人游戏客户端和服务端都必须放入相同版本的 `mods` 目录。
 3. 启动游戏或服务器。
 4. 首次加载后会生成配置目录：
 
@@ -35,7 +35,7 @@ Forge 1.20.1 item value calculator mod.
 config/arcvaluecalc/
 ```
 
-多人服务器建议客户端和服务端都安装。本模组会在连接服务器时优先请求服务端价格。
+多人服务器必须客户端和服务端都安装相同协议版本。本模组会在连接服务器时优先请求服务端价格。
 
 ## 首次使用
 
@@ -323,7 +323,7 @@ F:/mcplugins/mod/arc-value-calculator
 构建产物：
 
 ```text
-build/libs/arcvaluecalc-0.2.0.jar
+build/libs/arcvaluecalc-0.2.1.jar
 ```
 
 ## 当前限制

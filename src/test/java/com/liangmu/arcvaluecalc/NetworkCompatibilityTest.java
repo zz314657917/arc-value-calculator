@@ -11,6 +11,6 @@ final class NetworkCompatibilityTest {
     void protocolVersionChangesWhenPacketShapeChanges() throws Exception {
         Field field = ArcValueNetwork.class.getDeclaredField("PROTOCOL");
         field.setAccessible(true);
-        assertEquals("2", field.get(null));
+        assertEquals("3", field.get(null));
     }
 }

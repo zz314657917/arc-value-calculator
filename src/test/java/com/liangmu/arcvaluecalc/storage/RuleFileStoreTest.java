@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class RuleFileStoreTest {
@@ -19,14 +20,16 @@ final class RuleFileStoreTest {
     Path tempDir;
 
     @Test
-    void sanitizedGeneratedRulePathCannotEscapeRoot() {
+    void generatedRulePathCannotEscapeRoot() {
         RuleFileStore store = new RuleFileStore(tempDir.resolve("manual"), tempDir.resolve("generated"));
-        String sanitized = store.sanitize("../../outside");
-        Path root = Path.of("root").normalize();
-        Path resolved = root.resolve(sanitized + ".json").normalize();
+        ValueRule rule = new ValueRule(
+                "../../outside",
+                List.of(RuleIngredient.item(new ResourceLocation("minecraft", "planks"), 1)),
+                List.of(RuleIngredient.item(new ResourceLocation("minecraft", "stick"), 4)),
+                ValueSource.GENERATED_RULE
+        );
 
-        assertFalse(sanitized.contains(".."));
-        assertTrue(resolved.startsWith(root));
+        assertThrows(Exception.class, () -> store.writeGeneratedRules(List.of(rule)));
     }
 
     @Test
@@ -47,5 +50,33 @@ final class RuleFileStoreTest {
 
         assertFalse(Files.exists(generated.resolve("old/stale.json")));
         assertTrue(Files.exists(generated.resolve("minecraft/stick.json")));
+    }
+
+    @Test
+    void generatedRulePathKeepsLegalDotsAndHyphens() {
+        RuleFileStore store = new RuleFileStore(tempDir.resolve("manual"), tempDir.resolve("generated"));
+
+        assertTrue(store.sanitize("demo:part.name-extra").equals("demo/part.name-extra"));
+    }
+
+    @Test
+    void generatedRulePathCollisionFailsWrite() {
+        Path manual = tempDir.resolve("manual");
+        Path generated = tempDir.resolve("generated");
+        RuleFileStore store = new RuleFileStore(manual, generated);
+        ValueRule first = new ValueRule(
+                "demo:part$name",
+                List.of(RuleIngredient.item(new ResourceLocation("minecraft", "planks"), 1)),
+                List.of(RuleIngredient.item(new ResourceLocation("minecraft", "stick"), 4)),
+                ValueSource.GENERATED_RULE
+        );
+        ValueRule second = new ValueRule(
+                "demo:part#name",
+                List.of(RuleIngredient.item(new ResourceLocation("minecraft", "planks"), 1)),
+                List.of(RuleIngredient.item(new ResourceLocation("minecraft", "stick"), 4)),
+                ValueSource.GENERATED_RULE
+        );
+
+        assertThrows(Exception.class, () -> store.writeGeneratedRules(List.of(first, second)));
     }
 }

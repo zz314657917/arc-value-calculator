@@ -8,10 +8,10 @@
 - `service`：配方规则生成、tag 索引、价格计算、运行时缓存。
 - `command`：`/arcvalue` 管理命令。
 - `tooltip`：客户端 tooltip 显示。
-- `network`：客户端向服务端请求价格、服务端 reload 通知；当前协议版本为 `2`，客户端和服务端严格相等匹配。
+- `network`：客户端向服务端请求价格、服务端 reload 通知；当前协议版本为 `3`，客户端和服务端严格相等匹配。
 - `client`：客户端 recipe 更新后本地重算、服务端值缓存；服务端值缓存按 generation 接受响应，并清理 item-only 响应对应的精确 NBT pending key。
 - `service.PriceParser`：所有命令、JSON 和网络价格字符串的统一安全解析入口。
-- `service.ValueServices`：维护服务端权威 `ValueService` 和客户端 fallback `ValueService` 两个独立实例，避免单机同 JVM 下逻辑服务端和逻辑客户端互相覆盖快照。
+- `service.ValueServices`：维护服务端权威 `ValueService` 和客户端 fallback `ValueService` 两个独立实例，避免单机同 JVM 下逻辑服务端和逻辑客户端互相覆盖快照；客户端 tooltip 本地 fallback 直接使用 `clientFallback()`。
 
 ## 数据优先级
 

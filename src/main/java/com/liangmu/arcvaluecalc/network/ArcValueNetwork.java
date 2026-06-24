@@ -1,6 +1,7 @@
 package com.liangmu.arcvaluecalc.network;
 
 import com.liangmu.arcvaluecalc.ArcValueCalc;
+import com.liangmu.arcvaluecalc.model.ValueKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -10,7 +11,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public final class ArcValueNetwork {
-    private static final String PROTOCOL = "2";
+    private static final String PROTOCOL = "3";
     private static SimpleChannel channel;
     private static int id;
 
@@ -43,7 +44,7 @@ public final class ArcValueNetwork {
 
     public static void requestValue(ItemStack stack) {
         if (channel != null) {
-            channel.sendToServer(new ValueRequestMessage(stack));
+            channel.sendToServer(new ValueRequestMessage(ValueKey.exactOrItemOnly(stack)));
         }
     }
 

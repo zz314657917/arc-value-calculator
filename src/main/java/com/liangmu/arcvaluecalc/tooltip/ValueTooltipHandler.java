@@ -1,10 +1,10 @@
 package com.liangmu.arcvaluecalc.tooltip;
 
-import com.liangmu.arcvaluecalc.api.ArcValueApi;
 import com.liangmu.arcvaluecalc.client.ClientValueCache;
 import com.liangmu.arcvaluecalc.config.ArcValueConfig;
 import com.liangmu.arcvaluecalc.network.ArcValueNetwork;
 import com.liangmu.arcvaluecalc.service.ValueFormatter;
+import com.liangmu.arcvaluecalc.service.ValueServices;
 import java.math.BigDecimal;
 import java.util.Optional;
 import net.minecraft.ChatFormatting;
@@ -40,7 +40,7 @@ public final class ValueTooltipHandler {
             }
         }
         if (value.isEmpty() && shouldUseLocalFallback(stack)) {
-            value = ArcValueApi.getValue(stack);
+            value = ValueServices.clientFallback().getValue(stack);
         }
         if (ArcValueConfig.PREFER_SERVER_VALUES.get()) {
             requestServerValue(stack);

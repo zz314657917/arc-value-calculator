@@ -18,10 +18,11 @@
 ## 已验证命令
 
 - `./gradlew.bat test`：通过。
-- `./gradlew.bat build`：通过，产物 `build/libs/arcvaluecalc-0.2.0.jar`。
-- 已部署到客户端：`G:/MC/game/ArcartXDev1201Client/.minecraft/versions/1.20.1-Forge_47.3.0/mods/arcvaluecalc-0.2.0.jar`。
+- `./gradlew.bat build`：通过，产物 `build/libs/arcvaluecalc-0.2.1.jar`。
+- 已部署到客户端：`G:/MC/game/ArcartXDev1201Client/.minecraft/versions/1.20.1-Forge_47.3.0/mods/arcvaluecalc-0.2.1.jar`。
 - 客户端 mods 目录旧版 `arcvaluecalc-0.1.0.jar` 已移除。
 - 2026-06-23 15:34：拆分服务端/客户端 fallback 服务并改造生成规则事务写入后，`./gradlew.bat test`、`./gradlew.bat build` 通过；新版 `arcvaluecalc-0.2.0.jar` 已覆盖到客户端 mods 目录。
+- 2026-06-24：P1/P2 follow-up 修复后，`./gradlew.bat test`、`./gradlew.bat build` 通过；新版 `arcvaluecalc-0.2.1.jar` 已覆盖到客户端 mods 目录。
 
 ## 手动验证清单
 

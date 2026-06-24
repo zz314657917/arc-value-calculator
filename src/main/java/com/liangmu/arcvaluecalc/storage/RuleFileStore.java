@@ -10,7 +10,9 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 public final class RuleFileStore {
@@ -53,12 +55,17 @@ public final class RuleFileStore {
 
     private void writeGeneratedRulesTo(List<ValueRule> rules, Path root) throws IOException {
         Files.createDirectories(root);
+        Map<Path, String> occupiedPaths = new HashMap<>();
         for (ValueRule rule : rules) {
             String id = sanitize(rule.id());
             validateRelativeRulePath(id);
             Path path = root.resolve(id + ".json").normalize();
             if (!path.startsWith(root)) {
                 throw new IOException("Generated rule path escapes root: " + id);
+            }
+            String previousId = occupiedPaths.putIfAbsent(path, rule.id());
+            if (previousId != null) {
+                throw new IOException("Generated rule path collision: " + previousId + " and " + rule.id() + " -> " + path);
             }
             JsonUtil.write(path, rule.toJson());
         }
@@ -141,7 +148,7 @@ public final class RuleFileStore {
     }
 
     String sanitize(String id) {
-        return id.replace(':', '/').replaceAll("[^a-zA-Z0-9_/-]", "_");
+        return id.replace(':', '/').replaceAll("[^a-zA-Z0-9_.-/-]", "_");
     }
 
     private void validateRelativeRulePath(String id) throws IOException {

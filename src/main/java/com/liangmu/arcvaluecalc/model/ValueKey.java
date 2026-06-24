@@ -41,6 +41,14 @@ public final class ValueKey {
         return new ValueKey(id, stack.getTag());
     }
 
+    public static ValueKey exactOrItemOnly(ItemStack stack) {
+        try {
+            return exact(stack);
+        } catch (IllegalArgumentException exception) {
+            return itemOnly(stack);
+        }
+    }
+
     public ResourceLocation item() {
         return item;
     }

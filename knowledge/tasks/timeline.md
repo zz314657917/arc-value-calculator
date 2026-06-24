@@ -1,9 +1,24 @@
+## 2026-06-24 20:55 +08:00 - 修复标签价覆盖 item 价
+
+- 当前阶段：修复 P0 价格优先级正确性问题。
+- 本段重点：`expandTagValues()` 改为先展开 tag 价格，再用 `putIfAbsent` 合入固定物品价表，保证 item 固定价优先；多个标签命中同一物品仍取最低标签价。
+- 验证记录：新增 `ValueServiceTest` 覆盖 item 价不被 tag 价覆盖；完整 test/build 待执行。
+- 下一步：运行 `./gradlew.bat test` 和 `./gradlew.bat build`，覆盖客户端 jar。
+
+## 2026-06-24 02:05 +08:00 - P1/P2 follow-up hardening
+
+- 当前阶段：继续修复运行期安全与正确性问题。
+- 本段重点：版本升到 `0.2.1`；超大 NBT tooltip 查询安全退回 item-only；请求包从完整 `ItemStack` 改为受限 `ValueKey`；协议升到 `3`；`export rules` 真正写出当前生成规则缓存；生成规则路径保留合法字符并检测碰撞；tooltip 本地 fallback 直接使用客户端服务。
+- 关键决策：多人游戏按严格协议处理，README 明确客户端和服务端必须安装相同版本；公共 API 增加明确的 client/server 查询入口，旧入口保留兼容。
+- 验证记录：`./gradlew.bat compileJava` 通过；完整 test/build 待执行。
+- 下一步：跑 `./gradlew.bat test` 和 `./gradlew.bat build`，覆盖客户端 jar 后手测大 NBT tooltip 和 `/arcvalue export rules`。
+
 ## 2026-06-23 15:34 +08:00 - 服务实例拆分与生成规则事务写入
 
 - 当前阶段：`0.2.0` 继续完善，服务端/客户端 fallback 状态隔离与生成规则落盘安全已完成。
 - 本段重点：新增 `ValueServices.server()` / `clientFallback()` 分流；服务端命令、网络和生命周期使用权威实例；客户端 recipe 更新只刷新 fallback 实例；生成规则目录先写临时目录再替换旧目录。
 - 已完成：移除单一静态 `ValueService.get()`；`RuleFileStore` 支持路径注入和临时目录替换；补充生成规则目录替换测试；README 与 architecture/current-task/build 文档已同步。
-- 关键决策：保留 `ArcValueApi` 外部接口不变，内部按当前是否有服务端选择 server 或 client fallback；生成规则写入失败时保留旧目录，不再先删后写。
+- 关键决策：当时保留 `ArcValueApi` 外部接口不变，内部按当前是否有服务端选择 server 或 client fallback；后续 P2 修复已为客户端 tooltip 改用明确的 client fallback 入口。
 - 验证记录：`./gradlew.bat test` 通过；`./gradlew.bat build` 通过；新版 `arcvaluecalc-0.2.0.jar` 已覆盖到 ArcartX 1.20.1 客户端 mods 目录。
 - 遗留问题：仍未实际启动客户端或专服；机器配方 adapter、容器返还物/燃料成本、SCC 增益循环检测仍未实现。
 - 下一步：提交并推送；重启客户端执行 `/arcvalue reload`；多人环境验证服务端权威值、NBT 精确价格和 reload 同步。

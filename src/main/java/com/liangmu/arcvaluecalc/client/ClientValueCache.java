@@ -43,7 +43,8 @@ public final class ClientValueCache {
     }
 
     public static synchronized Lookup getServerValue(ItemStack stack) {
-        CacheEntry exact = SERVER_VALUES.get(ValueKey.exact(stack));
+        ValueKey requested = ValueKey.exactOrItemOnly(stack);
+        CacheEntry exact = SERVER_VALUES.get(requested);
         if (exact != null && exact.status != Status.PENDING) {
             return exact.toLookup();
         }
@@ -63,7 +64,7 @@ public final class ClientValueCache {
     }
 
     public static synchronized boolean markPending(ItemStack stack) {
-        return markPending(ValueKey.exact(stack));
+        return markPending(ValueKey.exactOrItemOnly(stack));
     }
 
     static synchronized boolean markPending(ValueKey key) {

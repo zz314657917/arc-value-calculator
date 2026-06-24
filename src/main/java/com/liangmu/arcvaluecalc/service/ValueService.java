@@ -43,6 +43,7 @@ public final class ValueService {
     private final ValueCalculator calculator = new ValueCalculator();
     private Map<ValueKey, ValueEntry> values = new LinkedHashMap<>();
     private Map<ValueKey, BigDecimal> manualValues = new LinkedHashMap<>();
+    private List<ValueRule> generatedRules = List.of();
     private List<ConfigDiagnostic> configDiagnostics = List.of();
     private long generation;
 
@@ -62,6 +63,7 @@ public final class ValueService {
         expandTagValues(manualValues, tagResult.values(), tagIndex);
         List<ValueRule> manualRules = ruleFileStore.loadManualRules();
         List<ValueRule> generatedRules = recipeManager == null ? ruleFileStore.loadGeneratedRules() : recipeRuleGenerator.generate(recipeManager, registryAccess);
+        this.generatedRules = List.copyOf(generatedRules);
         if (writeGeneratedRuleFiles && recipeManager != null && ArcValueConfig.GENERATE_RULE_FILES.get()) {
             try {
                 ruleFileStore.writeGeneratedRules(generatedRules);
@@ -83,7 +85,7 @@ public final class ValueService {
     }
 
     public synchronized Optional<BigDecimal> getValue(ItemStack stack) {
-        ValueEntry exact = values.get(ValueKey.exact(stack));
+        ValueEntry exact = values.get(ValueKey.exactOrItemOnly(stack));
         if (exact != null) {
             return Optional.of(exact.value());
         }
@@ -92,21 +94,25 @@ public final class ValueService {
     }
 
     public synchronized ValueLookupResult lookup(ItemStack stack) {
-        ValueKey exactKey = ValueKey.exact(stack);
-        ValueEntry exact = values.get(exactKey);
+        return lookup(ValueKey.exactOrItemOnly(stack));
+    }
+
+    public synchronized ValueLookupResult lookup(ValueKey requestedKey) {
+        ValueEntry exact = values.get(requestedKey);
         if (exact != null) {
-            return new ValueLookupResult(MatchType.EXACT, exactKey, exact.value(), generation);
+            MatchType matchType = requestedKey.hasNbt() ? MatchType.EXACT : MatchType.ITEM_ONLY;
+            return new ValueLookupResult(matchType, requestedKey, exact.value(), generation);
         }
-        ValueKey itemOnlyKey = ValueKey.itemOnly(stack);
+        ValueKey itemOnlyKey = new ValueKey(requestedKey.item(), (String) null);
         ValueEntry itemOnly = values.get(itemOnlyKey);
         if (itemOnly != null) {
             return new ValueLookupResult(MatchType.ITEM_ONLY, itemOnlyKey, itemOnly.value(), generation);
         }
-        return ValueLookupResult.missing(exactKey, generation);
+        return ValueLookupResult.missing(requestedKey, generation);
     }
 
     public synchronized ValueSource getSource(ItemStack stack) {
-        ValueEntry exact = values.get(ValueKey.exact(stack));
+        ValueEntry exact = values.get(ValueKey.exactOrItemOnly(stack));
         if (exact != null) {
             return exact.source();
         }
@@ -168,7 +174,8 @@ public final class ValueService {
         return path;
     }
 
-    public Path exportRules() {
+    public synchronized Path exportRules() throws IOException {
+        ruleFileStore.writeGeneratedRules(generatedRules);
         return ValuePaths.generatedRules();
     }
 
@@ -202,19 +209,21 @@ public final class ValueService {
         return RegistryAccess.EMPTY;
     }
 
-    private void expandTagValues(
+    static void expandTagValues(
             Map<ValueKey, BigDecimal> itemValues,
             Map<ResourceLocation, BigDecimal> tagValues,
             Map<ResourceLocation, Set<ValueKey>> tagIndex
     ) {
+        Map<ValueKey, BigDecimal> expanded = new LinkedHashMap<>();
         tagValues.forEach((tag, value) -> {
             Set<ValueKey> keys = tagIndex.get(tag);
             if (keys == null) {
                 return;
             }
             for (ValueKey key : keys) {
-                itemValues.merge(key, value, (oldValue, newValue) -> newValue.compareTo(oldValue) < 0 ? newValue : oldValue);
+                expanded.merge(key, value, BigDecimal::min);
             }
         });
+        expanded.forEach(itemValues::putIfAbsent);
     }
 }
