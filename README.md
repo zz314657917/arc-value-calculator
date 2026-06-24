@@ -6,7 +6,7 @@ Forge 1.20.1 item value calculator mod.
 
 ## 功能
 
-- 物品 tooltip 显示价格，例如 `价值：0.45 枫币`。
+- 物品 tooltip 显示价格，例如 `参考价格 : 0.45落叶币`。
 - 支持固定物品价格：`config/arcvaluecalc/item_values.json`。
 - 支持固定标签价格：`config/arcvaluecalc/tag_values.json`。
 - 支持手写规则：`config/arcvaluecalc/value_rule/**/*.json`。
@@ -87,7 +87,7 @@ config/arcvaluecalc-common.toml
 ```toml
 showTooltip = true
 showUnknown = false
-valueUnit = "枫币"
+valueUnit = "落叶币"
 preferServerValues = true
 generateRuleFiles = true
 maxIterations = 128

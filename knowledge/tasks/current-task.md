@@ -20,6 +20,7 @@
 - 根据 follow-up review 修复：协议升级到 `2`、模组版本升级到 `0.2.0`、客户端 generation 不再自增、旧响应不污染 serverAvailable、item-only 响应清理精确 NBT pending、请求限流和 NBT 上限、手写/生成规则全局收敛、生成规则路径 containment、`item_values.json` NBT 解析校验、标签价冲突取最低、低于 `0.0001` 的正数推导不归零。
 - 拆分 `ValueServices.server()` 与 `ValueServices.clientFallback()`，服务端命令/网络/生命周期使用权威实例，客户端 recipe 更新只刷新本地 fallback 实例。
 - 自动生成规则目录改为同父级临时目录写入，成功后替换旧目录，失败时保留旧目录。
+- tooltip 文案改为 `参考价格 : %s%s`，默认单位改为 `落叶币`，命令反馈同步使用“参考价格”措辞。
 
 ## 已确认事实
 
