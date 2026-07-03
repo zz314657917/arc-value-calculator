@@ -11,7 +11,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public final class ArcValueNetwork {
-    private static final String PROTOCOL = "3";
+    private static final String PROTOCOL = "4";
     private static SimpleChannel channel;
     private static int id;
 
@@ -40,6 +40,11 @@ public final class ArcValueNetwork {
                 .decoder(ReloadValuesMessage::decode)
                 .consumerMainThread(ReloadValuesMessage::handle)
                 .add();
+        channel.messageBuilder(TraceResponseMessage.class, nextId(), NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(TraceResponseMessage::encode)
+                .decoder(TraceResponseMessage::decode)
+                .consumerMainThread(TraceResponseMessage::handle)
+                .add();
     }
 
     public static void requestValue(ItemStack stack) {
@@ -57,6 +62,12 @@ public final class ArcValueNetwork {
     public static void sendReload(long generation) {
         if (channel != null) {
             channel.send(PacketDistributor.ALL.noArg(), new ReloadValuesMessage(generation));
+        }
+    }
+
+    public static void sendTrace(ServerPlayer player, com.liangmu.arcvaluecalc.model.ValueTrace trace) {
+        if (channel != null) {
+            channel.send(PacketDistributor.PLAYER.with(() -> player), new TraceResponseMessage(trace));
         }
     }
 

@@ -6,7 +6,7 @@
 
 ## 当前目标
 
-完成 `0.2.1` 安全与正确性 follow-up 修复、服务实例拆分和生成规则事务写入，并进入运行期验证。
+完成 `0.4.0` 安全与正确性 follow-up 修复、服务实例拆分、生成规则事务写入、Mekanism 初步适配和来源追踪 GUI，并进入运行期验证。
 
 ## 本次已完成
 
@@ -23,6 +23,10 @@
 - tooltip 文案改为 `参考价格 : %s%s`，默认单位改为 `落叶币`，命令反馈同步使用“参考价格”措辞。
 - 修复 P1/P2 follow-up：版本升级到 `0.2.1`；超大 NBT tooltip 查询安全退回 item-only；网络请求包只传受限 `ValueKey`；协议升级到 `3`；`/arcvalue export rules` 写出当前缓存生成规则；生成规则文件名保留合法 `.`/`-` 并检测碰撞；tooltip 本地 fallback 直接调用客户端 fallback 服务；README 明确多人必须双端安装。
 - 修复 P0 标签价优先级：标签价先单独展开并取最低，再用 `putIfAbsent` 合入，保证明确 item 固定价不被标签价覆盖。
+- 修复配置/规则隔离问题：非法 item ID 不再中断整次 `item_values.json` 加载；超长规则输入 NBT 在规则加载阶段拒绝，计算阶段也按单条规则隔离异常。
+- 增加 Mekanism 可选反射 adapter：检测到 Mekanism 时生成常见物品机器配方规则，未安装 Mekanism 时不硬依赖；版本升到 `0.3.0`。
+- 增加来源追踪：`ValueEntry` 保存规则 ID 和选中输入；新增 `/arcvalue trace` 聊天来源树、`/arcvalue inspect` GUI 来源查看器；网络协议升级到 `4`；版本升到 `0.4.0`。
+- 增加 Re-Avaritia / 无尽贪婪可选反射 adapter：支持工作台配方、压缩机、极限锻造和常见特殊工作台配方；`no_consume_catalyst_shaped` 返还的无限催化剂不计入消耗成本。
 
 ## 已确认事实
 
@@ -34,7 +38,7 @@
 - 坏价格 JSON 有效条目仍参与计算，但在修复坏条目前写配置类命令会拒绝覆盖文件。
 - 服务端返回缺失价格后，客户端不再回退本地计算值。
 - 服务端响应携带 requested/resolved key；客户端按 resolved key 缓存，并清理 requested 精确键的 pending 状态。
-- 网络协议 `PROTOCOL = "3"`，旧协议客户端/服务端不应与当前版本混用。
+- 网络协议 `PROTOCOL = "4"`，旧协议客户端/服务端不应与当前版本混用。
 - 单机同 JVM 下逻辑服务端和逻辑客户端不再共享同一个 `ValueService` 快照。
 
 ## 待验证点
@@ -48,7 +52,7 @@
 
 ## 当前结论
 
-代码层 follow-up 修复、服务实例拆分和生成规则事务写入已完成单元测试与构建，当前进入运行期手测阶段。下一类高价值改动是机器配方 adapter、容器返还物/燃料成本和配方环强连通分量检测。
+代码层 follow-up 修复、服务实例拆分、生成规则事务写入、Mekanism 初步适配、来源 GUI 和 Re-Avaritia / 无尽贪婪初步适配已完成单元测试与构建，当前进入运行期手测阶段。下一类高价值改动是其它机器配方 adapter、容器返还物/燃料成本和配方环强连通分量检测。
 
 ## 下一步
 
@@ -68,3 +72,4 @@
 - 2026-06-23：follow-up review 修复后，`./gradlew.bat test` 和 `./gradlew.bat build` 通过；jar 已复制到 `G:/MC/game/ArcartXDev1201Client/.minecraft/versions/1.20.1-Forge_47.3.0/mods/arcvaluecalc-0.2.0.jar`，旧 `arcvaluecalc-0.1.0.jar` 已移除。
 - 2026-06-23：服务端/客户端 fallback 服务拆分、生成规则临时目录替换写入后，`./gradlew.bat test` 和 `./gradlew.bat build` 通过；jar 已覆盖到 `G:/MC/game/ArcartXDev1201Client/.minecraft/versions/1.20.1-Forge_47.3.0/mods/arcvaluecalc-0.2.0.jar`。
 - 2026-06-24：P1/P2 follow-up 修复后，`./gradlew.bat test` 和 `./gradlew.bat build` 通过；jar 已覆盖到 `G:/MC/game/ArcartXDev1201Client/.minecraft/versions/1.20.1-Forge_47.3.0/mods/arcvaluecalc-0.2.1.jar`。
+- 2026-07-03：Re-Avaritia / 无尽贪婪初步适配后，`./gradlew.bat compileJava` 和 `./gradlew.bat test` 通过。

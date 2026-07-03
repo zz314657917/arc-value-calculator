@@ -18,8 +18,8 @@
 ## 已验证命令
 
 - `./gradlew.bat test`：通过。
-- `./gradlew.bat build`：通过，产物 `build/libs/arcvaluecalc-0.2.1.jar`。
-- 已部署到客户端：`G:/MC/game/ArcartXDev1201Client/.minecraft/versions/1.20.1-Forge_47.3.0/mods/arcvaluecalc-0.2.1.jar`。
+- `./gradlew.bat build`：通过，产物 `build/libs/arcvaluecalc-0.4.0.jar`。
+- 已部署到客户端：`G:/MC/game/ArcartXDev1201Client/.minecraft/versions/1.20.1-Forge_47.3.0/mods/arcvaluecalc-0.4.0.jar`。
 - 客户端 mods 目录旧版 `arcvaluecalc-0.1.0.jar` 已移除。
 - 2026-06-23 15:34：拆分服务端/客户端 fallback 服务并改造生成规则事务写入后，`./gradlew.bat test`、`./gradlew.bat build` 通过；新版 `arcvaluecalc-0.2.0.jar` 已覆盖到客户端 mods 目录。
 - 2026-06-24：P1/P2 follow-up 修复后，`./gradlew.bat test`、`./gradlew.bat build` 通过；新版 `arcvaluecalc-0.2.1.jar` 已覆盖到客户端 mods 目录。
@@ -29,6 +29,8 @@
 - 重启客户端确认主菜单不崩。
 - 进世界执行 `/arcvalue reload`。
 - 手持木头、木板、钻石、铁粒执行 `/arcvalue get`。
+- 手持合成物执行 `/arcvalue trace` 和 `/arcvalue trace 6`，确认显示来源树。
+- 手持合成物执行 `/arcvalue inspect`，确认打开来源 GUI。
 - 检查 tooltip：
   - 有价格：`参考价格 : 0.04落叶币`
   - 无价格：默认不显示价格行。

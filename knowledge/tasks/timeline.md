@@ -1,3 +1,26 @@
+## 2026-07-03 21:30 +08:00 - 来源追踪与 GUI
+
+- 当前阶段：实现参考价格来源可视化。
+- 本段重点：`ValueEntry` 记录规则 ID、输入和实际选中的 tag/choice 候选；新增 `/arcvalue trace [depth]` 聊天来源树；新增 `/arcvalue inspect` 打开客户端来源 GUI；网络协议升到 `4`；版本升到 `0.4.0`。
+- 关键决策：trace 和 GUI 共用服务端权威 trace 树；GUI 第一版是轻量 Screen，不做物品点击跳转和复杂容器。
+- 验证记录：`./gradlew.bat compileJava` 通过；完整 test/build 待执行。
+- 下一步：运行 `./gradlew.bat test` 和 `./gradlew.bat build`，覆盖客户端 jar 后手测 `/arcvalue trace` 和 `/arcvalue inspect`。
+
+## 2026-07-01 20:10 +08:00 - Mekanism 初步适配
+
+- 当前阶段：扩展自动规则生成范围。
+- 本段重点：新增 Mekanism 可选反射 adapter，覆盖常见 `item -> item`、`item + chemical -> item`、Combiner、Sawmill 主输出和 Pressurized Reaction 物品输出；未安装 Mekanism 时不硬依赖。
+- 关键决策：第一版 Mekanism adapter 只使用物品输入和物品输出，不计算气体、液体、化学品、电费、概率副产物和催化剂消耗；版本升到 `0.3.0`。
+- 验证记录：`./gradlew.bat compileJava` 通过；完整 test/build 待执行。
+- 下一步：运行 `./gradlew.bat test` 和 `./gradlew.bat build`，覆盖客户端 jar 后用带 Mekanism 的客户端执行 `/arcvalue reload`。
+
+## 2026-06-25 01:25 +08:00 - 配置与规则异常隔离
+
+- 当前阶段：修复 reload 安全边界。
+- 本段重点：`item_values.json` 的 item ID 改用 `ResourceLocation.tryParse`，单条手写价格加载捕获 `RuntimeException`；规则输入 NBT 在 `RuleIngredient` 构造时通过 `ValueKey` 提前校验长度；计算器按单条规则捕获异常并跳过坏规则。
+- 验证记录：新增非法 item ID 夹在两个合法项之间的回归测试；新增超长规则输入 NBT 和坏规则不阻断后续规则的回归测试；`./gradlew.bat test` 通过。
+- 下一步：运行 `./gradlew.bat build`，覆盖客户端 jar。
+
 ## 2026-06-24 20:55 +08:00 - 修复标签价覆盖 item 价
 
 - 当前阶段：修复 P0 价格优先级正确性问题。

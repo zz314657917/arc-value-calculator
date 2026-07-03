@@ -3,10 +3,12 @@ package com.liangmu.arcvaluecalc.command;
 import com.liangmu.arcvaluecalc.config.ArcValueConfig;
 import com.liangmu.arcvaluecalc.model.ValueKey;
 import com.liangmu.arcvaluecalc.service.PriceParser;
+import com.liangmu.arcvaluecalc.service.TraceFormatter;
 import com.liangmu.arcvaluecalc.service.ValueFormatter;
 import com.liangmu.arcvaluecalc.service.ValueService;
 import com.liangmu.arcvaluecalc.service.ValueServices;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import java.nio.file.Path;
 import net.minecraft.commands.CommandSourceStack;
@@ -15,6 +17,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
+import com.liangmu.arcvaluecalc.network.ArcValueNetwork;
 
 public final class ArcValueCommands {
     private ArcValueCommands() {
@@ -24,6 +27,12 @@ public final class ArcValueCommands {
         dispatcher.register(Commands.literal("arcvalue")
                 .then(Commands.literal("get")
                         .executes(context -> get(context.getSource())))
+                .then(Commands.literal("trace")
+                        .executes(context -> trace(context.getSource(), 4))
+                        .then(Commands.argument("depth", IntegerArgumentType.integer(1, 8))
+                                .executes(context -> trace(context.getSource(), IntegerArgumentType.getInteger(context, "depth")))))
+                .then(Commands.literal("inspect")
+                        .executes(context -> inspect(context.getSource(), 6)))
                 .then(Commands.literal("set")
                         .requires(source -> source.hasPermission(ArcValueConfig.ADMIN_PERMISSION_LEVEL.get()))
                         .then(Commands.argument("price", StringArgumentType.word())
@@ -163,6 +172,33 @@ public final class ArcValueCommands {
         service.reload(source.getServer().getRecipeManager(), source.getServer().registryAccess(), true);
         source.sendSuccess(() -> Component.translatable("commands.arcvalue.reload", service.size()), true);
         return 1;
+    }
+
+    private static int trace(CommandSourceStack source, int depth) {
+        ItemStack stack = heldStack(source);
+        if (stack.isEmpty()) {
+            source.sendFailure(Component.translatable("commands.arcvalue.no_item"));
+            return 0;
+        }
+        TraceFormatter.chatLines(ValueServices.server().trace(stack, depth))
+                .forEach(line -> source.sendSuccess(() -> line, false));
+        return 1;
+    }
+
+    private static int inspect(CommandSourceStack source, int depth) {
+        ItemStack stack = heldStack(source);
+        if (stack.isEmpty()) {
+            source.sendFailure(Component.translatable("commands.arcvalue.no_item"));
+            return 0;
+        }
+        try {
+            ServerPlayer player = source.getPlayerOrException();
+            ArcValueNetwork.sendTrace(player, ValueServices.server().trace(stack, depth));
+            return 1;
+        } catch (Exception e) {
+            source.sendFailure(Component.literal(e.getMessage()));
+            return 0;
+        }
     }
 
     private static int export(CommandSourceStack source, String type) {

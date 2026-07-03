@@ -46,12 +46,16 @@ public final class ValueTooltipHandler {
             requestServerValue(stack);
         }
         if (value.isPresent()) {
-            event.getToolTip().add(Component.translatable(
-                    "arcvaluecalc.tooltip.value",
-                    ValueFormatter.display(value.get()),
-                    ArcValueConfig.VALUE_UNIT.get()
-            ));
-        } else if (ArcValueConfig.SHOW_UNKNOWN.get()) {
+            if (ValueFormatter.shouldDisplay(value.get())) {
+                event.getToolTip().add(Component.translatable(
+                        "arcvaluecalc.tooltip.value",
+                        ValueFormatter.display(value.get()),
+                        ArcValueConfig.VALUE_UNIT.get()
+                ));
+            }
+            return;
+        }
+        if (ArcValueConfig.SHOW_UNKNOWN.get()) {
             event.getToolTip().add(Component.translatable("arcvaluecalc.tooltip.no_value").withStyle(ChatFormatting.RED));
         }
     }

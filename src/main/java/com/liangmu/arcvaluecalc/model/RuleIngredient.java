@@ -24,15 +24,19 @@ public final class RuleIngredient {
         if (count <= 0 || count > MAX_COUNT) {
             throw new IllegalArgumentException("count must be between 1 and " + MAX_COUNT);
         }
-        this.item = item;
-        this.tag = tag;
-        this.nbt = nbt;
-        this.choices = choices == null ? List.of() : List.copyOf(choices);
-        this.count = count;
-        int modes = (item == null ? 0 : 1) + (tag == null ? 0 : 1) + (this.choices.isEmpty() ? 0 : 1);
+        List<ValueKey> normalizedChoices = choices == null ? List.of() : List.copyOf(choices);
+        int modes = (item == null ? 0 : 1) + (tag == null ? 0 : 1) + (normalizedChoices.isEmpty() ? 0 : 1);
         if (modes != 1) {
             throw new IllegalArgumentException("ingredient requires exactly one of item, tag, or choices");
         }
+        if (item != null) {
+            new ValueKey(item, nbt);
+        }
+        this.item = item;
+        this.tag = tag;
+        this.nbt = nbt == null ? null : nbt.copy();
+        this.choices = normalizedChoices;
+        this.count = count;
     }
 
     public static RuleIngredient item(ResourceLocation item, int count) {
@@ -41,6 +45,19 @@ public final class RuleIngredient {
 
     public static RuleIngredient item(ResourceLocation item, CompoundTag nbt, int count) {
         return new RuleIngredient(Objects.requireNonNull(item), null, nbt, null, count);
+    }
+
+    public static RuleIngredient item(ValueKey key, int count) {
+        Objects.requireNonNull(key);
+        CompoundTag nbt = null;
+        if (key.nbt() != null) {
+            try {
+                nbt = TagParser.parseTag(key.nbt());
+            } catch (Exception e) {
+                throw new IllegalArgumentException("invalid nbt: " + e.getMessage(), e);
+            }
+        }
+        return new RuleIngredient(key.item(), null, nbt, null, count);
     }
 
     public static RuleIngredient tag(ResourceLocation tag, int count) {

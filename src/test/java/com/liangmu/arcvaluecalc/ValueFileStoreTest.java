@@ -44,6 +44,29 @@ final class ValueFileStoreTest {
     }
 
     @Test
+    void invalidManualItemIdDoesNotDiscardLaterValidEntriesOrAllowOverwrite() throws Exception {
+        Path itemValues = tempDir.resolve("item_values.json");
+        Path tagValues = tempDir.resolve("tag_values.json");
+        Files.writeString(itemValues, """
+                [
+                  {"item":"minecraft:stone","value":"0.02"},
+                  {"item":"Bad Namespace:ITEM","value":"1"},
+                  {"item":"minecraft:diamond","value":"0.45"}
+                ]
+                """, StandardCharsets.UTF_8);
+
+        ValueFileStore store = new ValueFileStore(itemValues, tagValues);
+        LoadResult<ValueKey, BigDecimal> result = store.loadManualValues();
+
+        assertTrue(result.hasErrors());
+        assertTrue(result.values().containsKey(key("minecraft:stone")));
+        assertTrue(result.values().containsKey(key("minecraft:diamond")));
+        assertTrue(result.diagnostics().stream().anyMatch(diagnostic -> "$[1]".equals(diagnostic.location())));
+        assertThrows(ConfigWriteBlockedException.class, () -> store.setManualValue(key("minecraft:iron_ingot"), PriceParser.parsePrice("0.11")));
+        assertTrue(Files.readString(itemValues, StandardCharsets.UTF_8).contains("minecraft:diamond"));
+    }
+
+    @Test
     void missingDefaultSeedIsNotMergedBackIntoExistingFile() throws Exception {
         Path itemValues = tempDir.resolve("item_values.json");
         Path tagValues = tempDir.resolve("tag_values.json");

@@ -2,13 +2,10 @@ package com.liangmu.arcvaluecalc.service;
 
 import com.liangmu.arcvaluecalc.ArcValueCalc;
 import com.liangmu.arcvaluecalc.model.RuleIngredient;
-import com.liangmu.arcvaluecalc.model.ValueKey;
 import com.liangmu.arcvaluecalc.model.ValueRule;
 import com.liangmu.arcvaluecalc.model.ValueSource;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -20,9 +17,11 @@ import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.minecraft.world.item.crafting.ShapelessRecipe;
 import net.minecraft.world.item.crafting.SmithingTransformRecipe;
 import net.minecraft.world.item.crafting.StonecutterRecipe;
-import net.minecraftforge.registries.ForgeRegistries;
 
 public final class RecipeRuleGenerator {
+    private final AvaritiaRecipeAdapter avaritiaRecipeAdapter = new AvaritiaRecipeAdapter();
+    private final MekanismRecipeAdapter mekanismRecipeAdapter = new MekanismRecipeAdapter();
+
     public List<ValueRule> generate(RecipeManager recipeManager, RegistryAccess registryAccess) {
         List<ValueRule> rules = new ArrayList<>();
         for (Recipe<?> recipe : recipeManager.getRecipes()) {
@@ -44,14 +43,16 @@ public final class RecipeRuleGenerator {
                 || recipe instanceof AbstractCookingRecipe
                 || recipe instanceof StonecutterRecipe
                 || recipe instanceof SmithingTransformRecipe)) {
-            return null;
+            return avaritiaRecipeAdapter.fromRecipe(recipe, registryAccess)
+                    .or(() -> mekanismRecipeAdapter.fromRecipe(recipe))
+                    .orElse(null);
         }
         List<RuleIngredient> inputs = new ArrayList<>();
         for (Ingredient ingredient : recipe.getIngredients()) {
             if (ingredient.isEmpty()) {
                 continue;
             }
-            RuleIngredient input = fromIngredient(ingredient);
+            RuleIngredient input = IngredientRuleConverter.fromIngredient(ingredient);
             if (input == null) {
                 return null;
             }
@@ -67,32 +68,5 @@ public final class RecipeRuleGenerator {
         RuleIngredient output = RuleIngredient.fromStack(result);
         ResourceLocation id = recipe.getId();
         return new ValueRule(id == null ? "unknown" : id.toString(), inputs, List.of(output), ValueSource.GENERATED_RULE);
-    }
-
-    private RuleIngredient fromIngredient(Ingredient ingredient) {
-        if (ingredient.isEmpty()) {
-            return null;
-        }
-        ItemStack[] items = ingredient.getItems();
-        if (items.length == 0) {
-            return null;
-        }
-        if (items.length == 1) {
-            ItemStack stack = items[0].copy();
-            stack.setCount(1);
-            return RuleIngredient.fromStack(stack);
-        }
-        Set<ValueKey> choices = new LinkedHashSet<>();
-        for (ItemStack item : items) {
-            ItemStack stack = item.copy();
-            stack.setCount(1);
-            if (ForgeRegistries.ITEMS.getKey(stack.getItem()) != null) {
-                choices.add(RuleIngredient.fromStack(stack).asKey());
-            }
-        }
-        if (choices.isEmpty()) {
-            return null;
-        }
-        return RuleIngredient.choices(List.copyOf(choices), 1);
     }
 }

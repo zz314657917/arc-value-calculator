@@ -5,11 +5,13 @@ import com.google.gson.JsonObject;
 import com.liangmu.arcvaluecalc.ArcValueCalc;
 import com.liangmu.arcvaluecalc.config.ArcValueConfig;
 import com.liangmu.arcvaluecalc.model.MatchType;
+import com.liangmu.arcvaluecalc.model.TraceInput;
 import com.liangmu.arcvaluecalc.model.ValueEntry;
 import com.liangmu.arcvaluecalc.model.ValueKey;
 import com.liangmu.arcvaluecalc.model.ValueLookupResult;
 import com.liangmu.arcvaluecalc.model.ValueRule;
 import com.liangmu.arcvaluecalc.model.ValueSource;
+import com.liangmu.arcvaluecalc.model.ValueTrace;
 import com.liangmu.arcvaluecalc.network.ArcValueNetwork;
 import com.liangmu.arcvaluecalc.storage.ConfigDiagnostic;
 import com.liangmu.arcvaluecalc.storage.ConfigWriteBlockedException;
@@ -24,6 +26,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -120,10 +123,59 @@ public final class ValueService {
         return itemOnly == null ? ValueSource.NONE : itemOnly.source();
     }
 
+    public synchronized ValueTrace trace(ItemStack stack, int maxDepth) {
+        return trace(ValueKey.exactOrItemOnly(stack), stack.getHoverName().getString(), 1, maxDepth);
+    }
+
+    public synchronized ValueTrace trace(ValueKey key, String label, int maxDepth) {
+        return trace(key, label, 1, maxDepth);
+    }
+
+    private ValueTrace trace(ValueKey requestedKey, String label, int count, int maxDepth) {
+        ValueKey resolvedKey = resolveKey(requestedKey);
+        return traceResolved(resolvedKey, label, count, Math.max(0, maxDepth), new LinkedHashSet<>());
+    }
+
     public synchronized Map<ValueKey, BigDecimal> snapshot() {
         Map<ValueKey, BigDecimal> snapshot = new LinkedHashMap<>();
         values.forEach((key, entry) -> snapshot.put(key, entry.value()));
         return snapshot;
+    }
+
+    private ValueKey resolveKey(ValueKey requestedKey) {
+        if (values.containsKey(requestedKey)) {
+            return requestedKey;
+        }
+        ValueKey itemOnlyKey = new ValueKey(requestedKey.item(), (String) null);
+        return values.containsKey(itemOnlyKey) ? itemOnlyKey : requestedKey;
+    }
+
+    private ValueTrace traceResolved(ValueKey key, String label, int count, int depth, Set<ValueKey> path) {
+        ValueEntry entry = values.get(key);
+        if (entry == null) {
+            return ValueTrace.missing(key, labelFor(key, label), count);
+        }
+        if (path.contains(key)) {
+            return ValueTrace.cycle(key, labelFor(key, label), entry.value(), entry.source(), count);
+        }
+        if (depth <= 0 && !entry.inputs().isEmpty()) {
+            return ValueTrace.truncated(key, labelFor(key, label), entry.value(), entry.source(), count);
+        }
+        Set<ValueKey> nextPath = new LinkedHashSet<>(path);
+        nextPath.add(key);
+        List<ValueTrace> children = new ArrayList<>();
+        for (TraceInput input : entry.inputs()) {
+            ValueKey childKey = input.selectedKey() == null ? input.ingredient().asKey() : input.selectedKey();
+            if (childKey == null) {
+                continue;
+            }
+            children.add(traceResolved(childKey, childKey.toString(), input.ingredient().count(), depth - 1, nextPath));
+        }
+        return new ValueTrace(key, labelFor(key, label), entry.value(), entry.source(), entry.ruleId(), count, false, false, false, children);
+    }
+
+    private String labelFor(ValueKey key, String label) {
+        return label == null || label.isBlank() ? key.item().toString() : label;
     }
 
     public synchronized int size() {

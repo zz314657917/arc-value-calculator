@@ -7,7 +7,9 @@ import com.liangmu.arcvaluecalc.model.ValueRule;
 import com.liangmu.arcvaluecalc.model.ValueSource;
 import com.liangmu.arcvaluecalc.service.ValueCalculator;
 import com.liangmu.arcvaluecalc.service.ValueFormatter;
+import net.minecraft.nbt.CompoundTag;
 import java.math.BigDecimal;
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -51,6 +53,9 @@ final class ValueCalculatorTest {
         );
         Map<ValueKey, ValueEntry> result = calculate(Map.of(nugget, new BigDecimal("0.01")), List.of(), List.of(rule)).values();
         assertValueEquals("0.09", result.get(iron).value());
+        assertEquals("nuggets", result.get(iron).ruleId());
+        assertEquals(nugget, result.get(iron).inputs().get(0).selectedKey());
+        assertValueEquals("0.09", result.get(iron).inputs().get(0).totalValue());
     }
 
     @Test
@@ -90,6 +95,7 @@ final class ValueCalculatorTest {
                 .calculate(manual, List.of(), List.of(rule), tags, 16)
                 .values();
         assertValueEquals("2.00", result.get(gear).value());
+        assertEquals(key("other:iron_ingot"), result.get(gear).inputs().get(0).selectedKey());
     }
 
     @Test
@@ -124,6 +130,7 @@ final class ValueCalculatorTest {
         );
         Map<ValueKey, ValueEntry> result = calculate(manual, List.of(), List.of(rule)).values();
         assertValueEquals("0.30", result.get(gear).value());
+        assertEquals(copper, result.get(gear).inputs().get(0).selectedKey());
     }
 
     @Test
@@ -177,9 +184,42 @@ final class ValueCalculatorTest {
     }
 
     @Test
+    void invalidRuleDoesNotStopLaterRules() throws Exception {
+        RuleIngredient badInput = RuleIngredient.item(iron.item(), 1);
+        CompoundTag oversized = new CompoundTag();
+        oversized.putString("payload", "a".repeat(ValueKey.MAX_NBT_CHARS + 1));
+        Field nbt = RuleIngredient.class.getDeclaredField("nbt");
+        nbt.setAccessible(true);
+        nbt.set(badInput, oversized);
+        ValueRule bad = new ValueRule(
+                "bad",
+                List.of(badInput),
+                List.of(RuleIngredient.item(gear.item(), 1)),
+                ValueSource.GENERATED_RULE
+        );
+        ValueRule good = new ValueRule(
+                "good",
+                List.of(RuleIngredient.item(iron.item(), 1)),
+                List.of(RuleIngredient.item(plate.item(), 1)),
+                ValueSource.GENERATED_RULE
+        );
+
+        Map<ValueKey, ValueEntry> result = calculate(Map.of(iron, new BigDecimal("1.00")), List.of(), List.of(bad, good)).values();
+
+        assertValueEquals("1.00", result.get(plate).value());
+    }
+
+    @Test
     void formatterKeepsTwoDecimals() {
         assertEquals("0.10", ValueFormatter.display(new BigDecimal("0.1")));
         assertEquals("0.46", ValueFormatter.display(new BigDecimal("0.455")));
+    }
+
+    @Test
+    void formatterHidesValuesThatRoundToZero() {
+        assertEquals("0.00", ValueFormatter.display(new BigDecimal("0.0001")));
+        assertTrue(!ValueFormatter.shouldDisplay(new BigDecimal("0.0001")));
+        assertTrue(ValueFormatter.shouldDisplay(new BigDecimal("0.01")));
     }
 
     private ValueCalculator.Result calculate(Map<ValueKey, BigDecimal> manual, List<ValueRule> manualRules, List<ValueRule> generatedRules) {

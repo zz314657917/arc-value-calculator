@@ -12,10 +12,11 @@ Forge 1.20.1 item value calculator mod.
 - 支持手写规则：`config/arcvaluecalc/value_rule/**/*.json`。
 - 支持自动生成普通配方规则：`config/arcvaluecalc/value_rule_generated/**/*.json`。
 - 支持 `/arcvalue` 命令查询、设置、删除、重载和导出。
+- 支持 `/arcvalue trace` 查看手持物品参考价格来源树，支持 `/arcvalue inspect` 打开来源 GUI。
 - 客户端单机可本地计算；多人服务器优先使用服务端权威价格。
 - 使用小数价格体系，不使用 EMC 大整数。
 - 价格输入带安全边界：不支持指数，最多 15 位整数和 4 位小数，最大 `1000000000000`。
-- 网络协议版本：`3`，客户端和服务端必须协议严格一致。
+- 网络协议版本：`4`，客户端和服务端必须协议严格一致。
 
 ## 兼容版本
 
@@ -26,7 +27,7 @@ Forge 1.20.1 item value calculator mod.
 
 ## 安装
 
-1. 下载或构建 `arcvaluecalc-0.2.1.jar`。
+1. 下载或构建 `arcvaluecalc-0.4.0.jar`。
 2. 单人游戏放入客户端 `mods` 目录；多人游戏客户端和服务端都必须放入相同版本的 `mods` 目录。
 3. 启动游戏或服务器。
 4. 首次加载后会生成配置目录：
@@ -241,6 +242,8 @@ NBT 使用 1.20.1 SNBT 字符串，不兼容旧 1.12.2 `NBTTag` JSON 格式。
 - campfire_cooking
 - stonecutting
 - smithing_transform
+- Mekanism 物品机器配方，检测到 Mekanism 时自动启用，包括常见 `item -> item`、`item + chemical -> item`、Combiner、Sawmill 主输出和 Pressurized Reaction 物品输出
+- Re-Avaritia / 无尽贪婪配方，检测到 Re-Avaritia 时自动启用，包括 `shaped_table`、`shapeless_table`、`compressor`、`extreme_smithing` 和常见特殊工作台配方
 
 自动规则会写入：
 
@@ -251,6 +254,8 @@ config/arcvaluecalc/value_rule_generated/
 未知输入不会参与本轮推导。循环配方通过迭代计算稳定最小值。
 
 自动规则会跳过有序配方里的空槽。多候选输入会保留候选集合，并在计算时从已知候选中选择最低成本项。
+Mekanism 适配不硬依赖 Mekanism；未安装 Mekanism 时不会加载 Mek 类。第一版 Mekanism 适配只按物品输入和物品输出推导，不计算气体、液体、化学品、电费、概率副产物和催化剂消耗。
+Re-Avaritia 适配不硬依赖 Re-Avaritia；未安装时不会加载无尽贪婪类。`no_consume_catalyst_shaped` 中返还的 `avaritia:infinity_catalyst` 不计入消耗成本；其它容器返还物仍未统一建模。
 内部计算使用高精度小数，只有 tooltip、命令输出和导出时格式化；低于 `0.0001` 的正数推导结果会抬到 `0.0001`，避免零成本链。
 
 ## 命令
@@ -259,6 +264,19 @@ config/arcvaluecalc/value_rule_generated/
 
 ```text
 /arcvalue get
+```
+
+查看手持物品参考价格来源树：
+
+```text
+/arcvalue trace
+/arcvalue trace 6
+```
+
+打开手持物品参考价格来源界面：
+
+```text
+/arcvalue inspect
 ```
 
 设置手持物品固定价格：
@@ -298,7 +316,7 @@ config/arcvaluecalc/value_rule_generated/
 /arcvalue export values
 ```
 
-`get` 可由玩家使用。`set`、`remove`、`settag`、`removetag`、`reload`、`export` 需要 `adminPermissionLevel` 配置指定的权限，默认 OP 2+。
+`get`、`trace`、`inspect` 可由玩家使用。`set`、`remove`、`settag`、`removetag`、`reload`、`export` 需要 `adminPermissionLevel` 配置指定的权限，默认 OP 2+。
 
 ## 开发构建
 
@@ -323,12 +341,14 @@ F:/mcplugins/mod/arc-value-calculator
 构建产物：
 
 ```text
-build/libs/arcvaluecalc-0.2.1.jar
+build/libs/arcvaluecalc-0.4.0.jar
 ```
 
 ## 当前限制
 
-- 第一版不适配 Mekanism、GTCEu、匠魂、植物魔法等机器配方。
+- 已初步适配 Mekanism 物品机器配方和 Re-Avaritia / 无尽贪婪配方；仍不适配 GTCEu、匠魂、植物魔法等机器配方。
+- Mekanism 的气体、液体、化学品、电费、概率副产物和催化剂消耗暂不参与计价。
+- Re-Avaritia 的工作台、压缩机、极限锻造配方可推导；除无限催化剂返还特例外，其它剩余物返还仍未统一处理。
 - 多候选 `Ingredient` 已按候选最低成本估值；复杂语义仍建议写 tag 价或手写规则。
 - NBT 定价能力存在于数据结构中，但命令只完整管理物品 ID 固定价和标签价。
 - 专服网络同步需要继续做实际多人环境烟测。

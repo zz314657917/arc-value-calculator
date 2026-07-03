@@ -1,6 +1,7 @@
 package com.liangmu.arcvaluecalc.service;
 
 import com.liangmu.arcvaluecalc.model.RuleIngredient;
+import com.liangmu.arcvaluecalc.model.TraceInput;
 import com.liangmu.arcvaluecalc.model.ValueEntry;
 import com.liangmu.arcvaluecalc.model.ValueKey;
 import com.liangmu.arcvaluecalc.model.ValueRule;
@@ -46,38 +47,10 @@ public final class ValueCalculator {
             boolean changed = false;
             lastChanged.clear();
             for (ValueRule rule : rules) {
-                BigDecimal inputValue = inputValue(rule.inputs(), values, tagIndex);
-                if (inputValue == null) {
-                    continue;
-                }
-                long outputCount = rule.outputs().stream().mapToLong(RuleIngredient::count).sum();
-                if (outputCount <= 0) {
-                    continue;
-                }
-                BigDecimal each;
                 try {
-                    each = inputValue.divide(BigDecimal.valueOf(outputCount), MC);
-                    if (each.signum() > 0 && each.compareTo(MIN_POSITIVE_VALUE) < 0) {
-                        each = MIN_POSITIVE_VALUE;
-                    }
-                    PriceParser.validateComputed(each);
-                } catch (IllegalArgumentException e) {
-                    ArcValueCalc.LOGGER.warn("Skipping value rule {} because calculated value is out of range", rule.id(), e);
-                    continue;
-                }
-                for (RuleIngredient output : rule.outputs()) {
-                    ValueKey outputKey = output.asKey();
-                    if (outputKey == null) {
-                        continue;
-                    }
-                    ValueEntry existing = values.get(outputKey);
-                    if (shouldReplace(existing, each, rule.source())) {
-                        values.put(outputKey, new ValueEntry(each, rule.source()));
-                        changed = true;
-                        if (lastChanged.size() < 10) {
-                            lastChanged.add(outputKey + " via " + rule.id());
-                        }
-                    }
+                    changed |= evaluateRule(values, tagIndex, lastChanged, rule);
+                } catch (RuntimeException e) {
+                    ArcValueCalc.LOGGER.error("Skipping invalid value rule {}", rule.id(), e);
                 }
             }
             if (!changed) {
@@ -87,6 +60,49 @@ public final class ValueCalculator {
         if (!lastChanged.isEmpty()) {
             ArcValueCalc.LOGGER.warn("Value calculation reached maxIterations. Still changing: {}", lastChanged);
         }
+    }
+
+    private boolean evaluateRule(
+            Map<ValueKey, ValueEntry> values,
+            Map<ResourceLocation, Set<ValueKey>> tagIndex,
+            List<String> lastChanged,
+            ValueRule rule
+    ) {
+        InputTrace inputTrace = inputValue(rule.inputs(), values, tagIndex);
+        if (inputTrace == null) {
+            return false;
+        }
+        long outputCount = rule.outputs().stream().mapToLong(RuleIngredient::count).sum();
+        if (outputCount <= 0) {
+            return false;
+        }
+        BigDecimal each;
+        try {
+            each = inputTrace.total().divide(BigDecimal.valueOf(outputCount), MC);
+            if (each.signum() > 0 && each.compareTo(MIN_POSITIVE_VALUE) < 0) {
+                each = MIN_POSITIVE_VALUE;
+            }
+            PriceParser.validateComputed(each);
+        } catch (IllegalArgumentException e) {
+            ArcValueCalc.LOGGER.warn("Skipping value rule {} because calculated value is out of range", rule.id(), e);
+            return false;
+        }
+        boolean changed = false;
+        for (RuleIngredient output : rule.outputs()) {
+            ValueKey outputKey = output.asKey();
+            if (outputKey == null) {
+                continue;
+            }
+            ValueEntry existing = values.get(outputKey);
+            if (shouldReplace(existing, each, rule.source())) {
+                values.put(outputKey, new ValueEntry(each, rule.source(), rule.id(), inputTrace.inputs()));
+                changed = true;
+                if (lastChanged.size() < 10) {
+                    lastChanged.add(outputKey + " via " + rule.id());
+                }
+            }
+        }
+        return changed;
     }
 
     private boolean shouldReplace(ValueEntry existing, BigDecimal value, ValueSource newSource) {
@@ -110,45 +126,49 @@ public final class ValueCalculator {
         };
     }
 
-    private BigDecimal inputValue(
+    private InputTrace inputValue(
             List<RuleIngredient> inputs,
             Map<ValueKey, ValueEntry> values,
             Map<ResourceLocation, Set<ValueKey>> tagIndex
     ) {
         BigDecimal total = BigDecimal.ZERO;
+        List<TraceInput> traceInputs = new ArrayList<>();
         for (RuleIngredient input : inputs) {
-            BigDecimal value;
+            SelectedInput selected;
             if (input.isTag()) {
-                value = bestTagValue(input.tag(), values, tagIndex);
+                selected = bestTagValue(input.tag(), values, tagIndex);
             } else if (input.isChoices()) {
-                value = bestChoiceValue(input.choices(), values);
+                selected = bestChoiceValue(input.choices(), values);
             } else {
-                ValueEntry entry = values.get(input.asKey());
-                value = entry == null ? null : entry.value();
+                ValueKey key = input.asKey();
+                ValueEntry entry = values.get(key);
+                selected = entry == null ? null : new SelectedInput(key, entry.value());
             }
-            if (value == null) {
+            if (selected == null) {
                 return null;
             }
-            total = total.add(value.multiply(BigDecimal.valueOf(input.count()), MC), MC);
+            BigDecimal inputTotal = selected.value().multiply(BigDecimal.valueOf(input.count()), MC);
+            traceInputs.add(new TraceInput(input, selected.key(), selected.value(), inputTotal, false));
+            total = total.add(inputTotal, MC);
         }
-        return total;
+        return new InputTrace(total, traceInputs);
     }
 
-    private BigDecimal bestChoiceValue(List<ValueKey> choices, Map<ValueKey, ValueEntry> values) {
-        BigDecimal best = null;
+    private SelectedInput bestChoiceValue(List<ValueKey> choices, Map<ValueKey, ValueEntry> values) {
+        SelectedInput best = null;
         for (ValueKey choice : choices) {
             ValueEntry entry = values.get(choice);
             if (entry == null) {
                 continue;
             }
-            if (best == null || entry.value().compareTo(best) < 0) {
-                best = entry.value();
+            if (best == null || entry.value().compareTo(best.value()) < 0) {
+                best = new SelectedInput(choice, entry.value());
             }
         }
         return best;
     }
 
-    private BigDecimal bestTagValue(
+    private SelectedInput bestTagValue(
             ResourceLocation tag,
             Map<ValueKey, ValueEntry> values,
             Map<ResourceLocation, Set<ValueKey>> tagIndex
@@ -157,19 +177,25 @@ public final class ValueCalculator {
         if (keys == null || keys.isEmpty()) {
             return null;
         }
-        BigDecimal best = null;
+        SelectedInput best = null;
         for (ValueKey key : keys) {
             ValueEntry entry = values.get(key);
             if (entry == null) {
                 continue;
             }
-            if (best == null || entry.value().compareTo(best) < 0) {
-                best = entry.value();
+            if (best == null || entry.value().compareTo(best.value()) < 0) {
+                best = new SelectedInput(key, entry.value());
             }
         }
         return best;
     }
 
     public record Result(Map<ValueKey, ValueEntry> values) {
+    }
+
+    private record InputTrace(BigDecimal total, List<TraceInput> inputs) {
+    }
+
+    private record SelectedInput(ValueKey key, BigDecimal value) {
     }
 }

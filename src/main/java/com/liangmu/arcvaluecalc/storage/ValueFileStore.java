@@ -48,7 +48,7 @@ public final class ValueFileStore {
                 ValueKey key = readKey(object, path, "$[" + i + "]");
                 BigDecimal value = readPrice(object, "value", path, "$[" + i + "]");
                 values.put(key, value);
-            } catch (IllegalArgumentException e) {
+            } catch (RuntimeException e) {
                 addDiagnostic(diagnostics, path, "$[" + i + "]", e.getMessage());
             }
         }
@@ -163,7 +163,15 @@ public final class ValueFileStore {
     private ValueKey readKey(JsonObject object, Path path, String location) {
         String item = requireString(object, "item", path, location);
         String nbt = object.has("nbt") ? normalizeNbt(requireString(object, "nbt", path, location + ".nbt"), path, location + ".nbt") : null;
-        return new ValueKey(new ResourceLocation(item), nbt);
+        return new ValueKey(parseId(item), nbt);
+    }
+
+    private ResourceLocation parseId(String raw) {
+        ResourceLocation id = ResourceLocation.tryParse(raw);
+        if (id == null) {
+            throw new IllegalArgumentException("invalid item id: " + raw);
+        }
+        return id;
     }
 
     private JsonObject writeKey(ValueKey key) {
